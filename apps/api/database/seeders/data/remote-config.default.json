@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "minSupportedVersion": "0.0.1",
+  "featureFlags": {},
+  "announcements": [],
+  "providers": [],
+  "models": [],
+  "presets": { "camera": [], "effects": [], "styles": [] },
+  "dialects": []
+}

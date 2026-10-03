@@ -1,0 +1,29 @@
+<?php
+
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ConfigController;
+use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\MeController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function () {
+    Route::get('config', [ConfigController::class, 'show'])->middleware('throttle:60,1');
+
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('auth/register', [AuthController::class, 'register']);
+        Route::post('auth/login', [AuthController::class, 'login']);
+        Route::post('auth/google', [AuthController::class, 'google']);
+        Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
+    });
+
+    Route::middleware(['auth:sanctum', 'throttle:120,1'])->group(function () {
+        Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::post('auth/email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:3,1');
+        Route::get('me', [MeController::class, 'show']);
+        Route::get('entitlements', [MeController::class, 'entitlements']);
+        Route::get('devices', [DeviceController::class, 'index']);
+        Route::patch('devices/{device}', [DeviceController::class, 'update']);
+        Route::delete('devices/{device}', [DeviceController::class, 'destroy']);
+    });
+});
