@@ -3,7 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel, openTab } from './helpers';
+import { enablePro, launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 /** Stands in for the backend and records every byte the extension sends it. */
@@ -35,6 +35,7 @@ test('a full autopilot run never sends keys, script text or prompts to the backe
   const mock = await startMockProvider();
   const { ctx, id } = await launchExtension();
   const page = await openSidePanel(ctx, id);
+  await enablePro(page);
   await page.evaluate(() => new Promise<void>((r) => { const o = indexedDB.open('frameloom'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); const s = t.objectStore('kv'); s.put({ key: 'apiBase', value: 'http://127.0.0.1:9102' }); s.put({ key: 'pollMs', value: 300 }); t.oncomplete = () => r(); }; }));
   await page.reload();
   await expect(page.getByTestId('config-status')).toContainText('Config v1 (network)');

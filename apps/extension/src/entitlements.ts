@@ -3,12 +3,23 @@ import { db } from './db/db';
 import { getApiBase, getSession } from './services';
 
 /** Cached plan limits. Offline, signed out or before the first fetch, the free-plan fallback applies. */
+/** Self-hosted installs and tests can pin limits locally (kv 'entitlementsOverride'); it wins over everything else. */
+async function override(): Promise<Entitlements | undefined> {
+  const raw = (await db.kv.get('entitlementsOverride'))?.value;
+  const parsed = raw ? EntitlementsSchema.safeParse(raw) : undefined;
+  return parsed?.success ? parsed.data : undefined;
+}
+
 export async function getEntitlements(): Promise<Entitlements> {
+  const o = await override();
+  if (o) return o;
   const row = (await db.kv.get('entitlements'))?.value as Entitlements | undefined;
   return row ?? FALLBACK_ENTITLEMENTS;
 }
 
 export async function refreshEntitlements(): Promise<Entitlements> {
+  const o = await override();
+  if (o) return o;
   const session = await getSession();
   if (!session) { await db.kv.delete('entitlements'); return FALLBACK_ENTITLEMENTS; }
   try {

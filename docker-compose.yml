@@ -1,0 +1,51 @@
+# Backend for local development: MySQL 8, Redis and the Laravel app.
+#   docker compose up --build        then open http://localhost:8000/admin
+# The extension is built on the host (pnpm), not in a container.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: frameloom
+      MYSQL_USER: frameloom
+      MYSQL_PASSWORD: frameloom-dev-only
+      MYSQL_ROOT_PASSWORD: root-dev-only
+    ports: ["3307:3306"]
+    volumes: [mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot-dev-only"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+
+  api:
+    build: ./apps/api
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_started }
+    environment:
+      APP_ENV: local
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: frameloom
+      DB_USERNAME: frameloom
+      DB_PASSWORD: frameloom-dev-only
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+    volumes:
+      - ./apps/api:/var/www/html/apps/api
+      - ./packages/shared/src/telemetry:/var/www/html/packages/shared/src/telemetry:ro
+      - ./brand.config.json:/var/www/html/brand.config.json:ro
+    ports: ["8000:8000"]
+    command: >
+      sh -c "cd /var/www/html/apps/api && composer install --no-interaction &&
+             (test -f .env || cp .env.example .env) && php artisan key:generate --force &&
+             php artisan migrate --seed --force &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+volumes:
+  mysql-data:

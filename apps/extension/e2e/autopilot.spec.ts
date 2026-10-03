@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel, openTab } from './helpers';
+import { enablePro, launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 async function setup(page: Page) {
+  await enablePro(page);
   await openTab(page, 'Settings');
   await page.getByRole('button', { name: 'Create vault' }).click();
   const row = page.getByTestId('key-custom');

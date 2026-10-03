@@ -1,0 +1,7 @@
+title = "frameloom"
+[extend]
+useDefault = true
+[allowlist]
+description = "Obvious test values"
+regexes = ['''good-key''', '''whsec_test_secret''', '''key_test''', '''sk-ant-secret-123''', '''frameloom-dev-only''', '''root-dev-only''']
+paths = ['''docs/provider-notes\.md''']

@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel, openTab } from './helpers';
+import { enablePro, launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider, type MockProvider } from './mock-provider';
 
 const FAL_BASE = 'http://127.0.0.1:9101/fal';
@@ -61,6 +61,7 @@ async function boot(profile?: string) {
   const l = await launchExtension(profile);
   ctx = l.ctx;
   page = await openSidePanel(ctx, l.id);
+  await enablePro(page);
   await setupKeys(page);
   await page.evaluate(() => new Promise<void>((r) => { const o = indexedDB.open('frameloom'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ key: 'pollMs', value: 300 }); t.oncomplete = () => r(); }; }));
   return l;

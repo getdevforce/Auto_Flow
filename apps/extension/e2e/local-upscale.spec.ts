@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel, openTab } from './helpers';
+import { enablePro, launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 const hasFfmpeg = (() => { try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
@@ -18,6 +18,7 @@ test('local ffmpeg.wasm resize turns a real 640x360 draft into 1280x720 when no 
   const mock = await startMockProvider(9101, { realMp4: fs.readFileSync(file) });
   const { ctx, id } = await launchExtension();
   const page = await openSidePanel(ctx, id);
+  await enablePro(page);
   await page.evaluate(() => new Promise<void>((r) => { const o = indexedDB.open('frameloom'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ key: 'pollMs', value: 300 }); t.oncomplete = () => r(); }; }));
   await openTab(page, 'Settings');
   await page.getByRole('button', { name: 'Create vault' }).click();

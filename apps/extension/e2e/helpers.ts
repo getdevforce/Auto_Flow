@@ -25,3 +25,13 @@ export async function openSidePanel(ctx: BrowserContext, id: string): Promise<Pa
 }
 
 export const openTab = (page: Page, name: string) => page.getByRole('tab', { name, exact: true }).click();
+
+/** Pins generous plan limits locally so e2e runs that are not about plans can use every feature. */
+export const enablePro = (page: Page) => page.evaluate(() => new Promise<void>((r) => {
+  const o = indexedDB.open('frameloom');
+  o.onsuccess = () => {
+    const t = o.result.transaction('kv', 'readwrite');
+    t.objectStore('kv').put({ key: 'entitlementsOverride', value: { plan: 'pro', limits: { runs_per_month: 1000, shots_per_run: 500, projects: 1000, characters: 1000, devices: 5, features: ['full_auto', 'audio', 'stitch'] }, bonus_runs: 0 } });
+    t.oncomplete = () => r();
+  };
+}));
