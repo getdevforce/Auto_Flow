@@ -9,6 +9,7 @@ import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
 import { dismissAnnouncement, updateRequired, useConfig } from '../../src/config-store';
 import { isTelemetryEnabled, setTelemetryEnabled, track, flushTelemetry } from '../../src/telemetry';
+import { refreshEntitlements, usage } from '../../src/entitlements';
 import { sendFeedback } from '../../src/feedback';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
@@ -26,12 +27,14 @@ export function App() {
   const { config, announcements, load } = useConfig();
   const [err, setErr] = useState('');
   const [share, setShare] = useState(true);
+  const [plan, setPlan] = useState<string>('');
   const [fbMsg, setFbMsg] = useState('');
   const [fbStatus, setFbStatus] = useState('');
 
   useEffect(() => {
     getSession().then(setSession);
     isTelemetryEnabled().then(setShare);
+    void loadPlan();
     track('app_opened');
     void flushTelemetry();
     fetchConfig().then((r) => setCfg(`Config v${r.config.version} (${r.source})`));
@@ -39,12 +42,19 @@ export function App() {
   }, []);
   useEffect(() => { try { localStorage.setItem('tab', tab); } catch { /* storage can be unavailable; the tab simply is not remembered */ } }, [tab]);
 
+  async function loadPlan() {
+    const e = await refreshEntitlements();
+    const u = await usage();
+    setPlan(`${e.plan} plan: ${u.runsThisMonth} of ${e.limits.runs_per_month + e.bonus_runs} Autopilot runs this month, up to ${e.limits.shots_per_run} shots per run.`);
+  }
+
   async function onLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     try {
       setErr('');
       setSession(await login(String(f.get('email')), String(f.get('password'))));
+      void loadPlan();
     } catch (x) {
       setErr((x as Error).message);
     }
@@ -94,6 +104,7 @@ export function App() {
             {session ? (
               <section className="mt-2">
                 <p data-testid="signed-in">Signed in as {session.email} ({session.plan} plan)</p>
+                {plan && <p className="text-muted" data-testid="plan-usage">{plan}</p>}
                 <button className="mt-2 rounded-md border border-line px-3 py-1" onClick={() => logout().then(() => setSession(undefined))}>Sign out</button>
               </section>
             ) : (

@@ -45,6 +45,7 @@ export async function login(email: string, password: string, baseUrl?: string): 
   const d = data as unknown as { token: string; user: { email: string; plan: string } };
   const session = { token: d.token, email: d.user.email, plan: d.user.plan, installId };
   await db.kv.put({ key: 'session', value: session });
+  void import('./entitlements').then((m) => m.refreshEntitlements());
   return session;
 }
 export async function logout() { await db.kv.delete('session'); }

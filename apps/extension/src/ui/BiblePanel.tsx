@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { CharacterDraft, RefView } from '@frameloom/shared';
 import { db } from '../db/db';
+import { getEntitlements } from '../entitlements';
 import { addReferenceAsset, lockCharacterDraft, newCharacter, saveCharacter } from '../bible/store';
 
 const TRAITS = ['face', 'age', 'build', 'hair', 'skin', 'marks'] as const;
@@ -15,7 +16,13 @@ export function BiblePanel() {
 
   return (
     <section className="mt-4 grid gap-3" aria-label="Story Bible">
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { void saveCharacter(newCharacter(name.trim())); setName(''); } }}>
+      <form className="flex gap-2" onSubmit={async (e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        const limit = (await getEntitlements()).limits.characters;
+        if ((await db.characters.count()) >= limit) { setMsg(`Your plan allows ${limit} characters. Remove one or upgrade your plan.`); return; }
+        await saveCharacter(newCharacter(name.trim())); setName('');
+      }}>
         <label className="grid flex-1 gap-1">New character name<input value={name} onChange={(e) => setName(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
         <button className="self-end rounded-md bg-accent px-3 py-1.5 text-accent-ink">Add</button>
       </form>

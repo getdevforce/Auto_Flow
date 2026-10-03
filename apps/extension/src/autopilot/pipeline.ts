@@ -1,5 +1,5 @@
 import {
-  analyseScript, autoPick, createProvider, lockCharacter, lockLocation, needsApproval, newRun, platePrompts, portraitPrompt,
+  checkCharacters, checkStartRun, analyseScript, autoPick, createProvider, lockCharacter, lockLocation, needsApproval, newRun, platePrompts, portraitPrompt,
   reduce, sheetPrompt, SHEET_VIEWS, type AnalysedCharacter, type CharacterDraft, type Job, type LocationDraft, type ProviderId,
   type RunEvent, type RefView, type TextProvider,
 } from '@frameloom/shared';
@@ -9,6 +9,7 @@ import { vault } from '../services';
 import { CachingTextProvider } from './llm-cache';
 import { track } from '../telemetry';
 import { assertSupported } from '../config-store';
+import { getEntitlements, refreshEntitlements, usage } from '../entitlements';
 import { defaultSettings, driveProduction } from './shots';
 import type { RunSettings } from '../db/db';
 
@@ -37,6 +38,10 @@ async function log(runId: string, text: string): Promise<void> {
 
 export async function startAutopilot(s: AutopilotStart): Promise<string> {
   await assertSupported();
+  const ent = await refreshEntitlements();
+  const u = await usage();
+  const verdict = checkStartRun(ent, { autonomy: s.autonomy ?? 'checkpoints', runsThisMonth: u.runsThisMonth, project: s.project, existingProjects: u.projects });
+  if (!verdict.ok) throw new Error(verdict.message);
   const id = crypto.randomUUID();
   await db.runs.put({
     id, name: s.project, project: s.project, state: 'draft', budgetUsd: s.budgetUsd, nameTemplate: '{project}/{seq}_{scene}_{shot}',
@@ -110,6 +115,8 @@ export async function drive(runId: string): Promise<boolean> {
     const provider = await textProviderFor(run);
     const { analysis } = await analyseScript({ provider, model: run.textModel as string, script: run.script as string });
     await db.analyses.put({ runId, analysis });
+    const chars = checkCharacters(await getEntitlements(), analysis.characters.length);
+    if (!chars.ok) throw new Error(chars.message); // pauses the run with the plan message; the user can upgrade and resume
     await log(runId, `Analysis found ${analysis.characters.length} character(s), ${analysis.locations.length} location(s), ${analysis.scenes.length} scene(s); coverage ${analysis.coverage.covered}/${analysis.coverage.expected}.`);
     await db.runs.update(runId, { stage: 'characters' });
     await send(runId, 'ANALYSIS_DONE', 'analysis-done');

@@ -17,3 +17,4 @@ export * from './planning';
 export * from './library';
 export * from './telemetry/client';
 export * from './flags';
+export * from './entitlements';

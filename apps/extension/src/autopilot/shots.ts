@@ -1,5 +1,5 @@
 import {
-  autoPick, buildConcatList, buildManifest, buildReport, compilePrompt, createProvider, decideFailure, needsApproval, planShots, probeMp4,
+  shotAllowance, autoPick, buildConcatList, buildManifest, buildReport, compilePrompt, createProvider, decideFailure, needsApproval, planShots, probeMp4,
   releasable, renderName, scoreEnvironment, scoreIdentity, reduce, type CharacterVersion, type ErrorKind, type Job, type LocationVersion,
   type ManifestShot, type ProviderId, type RunEvent, type Shot, type ScriptAnalysis,
 } from '@frameloom/shared';
@@ -9,6 +9,7 @@ import { blobUrlFor } from '../background/offscreen';
 import type { ImageJobInput, UpscaleJobInput, VideoJobInput } from '../background/executor';
 import { directorRefine, textProvider } from './director';
 import { track } from '../telemetry';
+import { getEntitlements } from '../entitlements';
 
 const PIPELINE_CAPS = { maxReferenceImages: 4, ratios: [] as string[], durationsSec: [] as number[], resolutions: [] as string[], firstLastFrame: false, identityTraining: false, lipSync: false, upscaleFactors: [] as number[] };
 
@@ -316,9 +317,11 @@ export async function driveProduction(runId: string): Promise<boolean> {
         provider, model: s.directorModel, analysis, maxDurationSec: s.maxDurationSec, allowedDurations: s.allowedDurations,
         sceneText: (i) => scenes.find((x) => x.index === i)?.text ?? '',
       });
+      const allowance = shotAllowance(await getEntitlements(), plan.length);
       await db.shots.bulkPut(plan.map((p): ShotRow => ({
-        id: `${runId}:${p.seq}`, runId, seq: p.seq, status: 'planned', plan: p, kfAttempt: 0, kfScores: [], videoAttempt: 0, upAttempt: 0, variantTried: false, fallbacksTried: [], costUsd: 0, retries: 0,
+        id: `${runId}:${p.seq}`, runId, seq: p.seq, status: p.seq > allowance.allowed ? 'skipped' : 'planned', flagReason: p.seq > allowance.allowed ? (allowance.skippedReason ?? undefined) : undefined, plan: p, kfAttempt: 0, kfScores: [], videoAttempt: 0, upAttempt: 0, variantTried: false, fallbacksTried: [], costUsd: 0, retries: 0,
       })));
+      if (allowance.skippedReason) await log(runId, allowance.skippedReason);
       await log(runId, `Planned ${plan.length} shot(s) across ${analysis.scenes.length} scene(s). Sequence numbers fixed 1 to ${plan.length}.`);
     }
     await db.runs.update(runId, { stage: 'keyframes', startedAt: run.startedAt ?? Date.now() });
