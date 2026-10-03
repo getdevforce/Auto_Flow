@@ -196,3 +196,27 @@ stack traces and writes reset tokens to logs. Add a production block or a startu
 `APP_ENV=production`. `SESSION_DRIVER=database` with no `SESSION_SECURE_COOKIE` note: set it for the admin panel behind HTTPS.
 `ci.yml` was not reviewed for secret handling.
 Dependency CVE status unknown; run `pnpm audit` and `composer audit` in CI.
+
+---
+
+## Resolution (after the review)
+
+| Finding | Status |
+|---|---|
+| M1 passphrase mode in the worker | Fixed: the unlocked key is shared through `chrome.storage.session` (memory only, extension contexts only); covered by vault unit tests and an e2e where the worker runs jobs on a passphrase vault. |
+| M2 device-mode claim | Fixed by rewording the UI and `docs/PLAN.md`: device mode obscures keys at rest but does not stop anyone who can read the profile. Not verified empirically. |
+| M3 telemetry free text | Tightened: no spaces or `@` in string properties on client and server (shared catalogue is the single source). They remain short codes, not enumerations. |
+| M4 plaintext API base | Fixed: https only (loopback exempt) for the build default and the runtime override; a production build refuses to run without `WXT_API_BASE`. |
+| M5 reset-link host poisoning | Fixed: `URL::forceRootUrl` and trusted hosts in production/staging. |
+| M6 Google pre-hijack | Fixed: linking Google to an unverified password account removes that password and its sessions. |
+| M7 webhook loss | Fixed: recording and applying share one transaction; only a unique violation counts as a duplicate. Tested. |
+| M8 customer PII export | Fixed: users CSV export limited to support and super admin. |
+| L1, L2, L3 | Fixed: 10 character floor, `init()` refuses to overwrite, "Delete all local data" wipes the vault. |
+| L6 | Fixed: https required for endpoints; optional host permission is requested on save; fal status/response URLs must be on the queue host. |
+| L11 | Fixed: sender checks on background and offscreen handlers. |
+| L12 | Partly: login timing equalised; registration still reveals taken emails (needed for a usable sign-up form). |
+| L13 | Fixed on MySQL with append-only triggers; SQLite (tests) relies on the model guard. |
+| L14, L15, L16 | Fixed: template import validated and audited, tag LIKE escaped, CORS restricted to extension origins, `.env.example` ships `APP_DEBUG=false`. |
+| Email verification route missing | Fixed: signed `/email/verify/{id}/{hash}` route with tests. |
+| Sanctum tokens never expire | Fixed: 30 days. |
+| L4 AAD, L5 key strings in memory, L7-L10, 2FA for staff | Open. Recommended before launch: staff two-factor authentication, per-slot AAD in the vault. |

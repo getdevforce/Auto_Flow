@@ -23,9 +23,8 @@ The backend never sees keys, prompts, scripts or media (enforced by a payload al
 - No in-memory timers for durable work. Every job transition is a single Dexie transaction.
 
 ### Key vault
-AES-GCM via WebCrypto. Passphrase mode: PBKDF2-SHA256, 600k iterations, random salt, key derived on unlock and held in worker memory only.
-No-passphrase mode: non-extractable CryptoKey stored in IndexedDB. Protects against casual file/profile-dump reading of ciphertext;
-does NOT protect against malware running as the user or other code in the extension origin. The UI says so.
+AES-GCM via WebCrypto. Passphrase mode: PBKDF2-SHA256, 600k iterations, random salt, minimum 10 characters. Nothing that can decrypt is stored on disk; after unlocking, the raw key goes to `chrome.storage.session` (memory only, extension contexts only) so the service worker can run jobs, and is cleared on lock or when the browser closes.
+Device mode: a non-extractable CryptoKey sits in IndexedDB beside the ciphertext. Keys are not plain text on disk, but anyone who can read the browser profile or run code as the user can use that key. The UI says so and recommends a passphrase.
 
 ## 2. Data model (IndexedDB, Dexie)
 projects, runs, scripts, analyses, characters, characterVersions, locations, locationVersions, props, styles,

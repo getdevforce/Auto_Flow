@@ -57,8 +57,8 @@ async function extractFrame(assetId: string, at: 'first' | 'last' | number, outI
   } finally { URL.revokeObjectURL(url); }
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
-  if (msg?.target !== 'offscreen') return false;
+chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+  if (sender.id !== chrome.runtime.id || msg?.target !== 'offscreen') return false;
   if (msg.type === 'blob-url') {
     db.assets.get(msg.assetId).then((a) => respond(a ? URL.createObjectURL(a.blob) : null)).catch(() => respond(null));
     return true;
