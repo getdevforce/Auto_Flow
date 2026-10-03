@@ -7,7 +7,7 @@
  * protocol, not re-read from current docs. Policy rejections are detected by matching moderation/policy/safety in the
  * error body because the exact code is unconfirmed. See docs/provider-notes.md and docs/qa-checklist.md.
  */
-import type { ZodType } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 import { ProviderError } from '../errors';
 import { dataUri, fromBase64 } from './bytes';
 import { request, type Fetcher } from './http';
@@ -59,7 +59,7 @@ export class OpenAICompatibleProvider implements TextProvider, ImageProvider {
     return text;
   }
 
-  async completeJson<T>(req: TextRequest, schema: ZodType<T>): Promise<T> {
+  async completeJson<T>(req: TextRequest, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T> {
     let issue = '';
     for (let attempt = 0; attempt < 2; attempt++) {
       const prompt = attempt === 0 ? `${req.prompt}\n\nReply with JSON only.` : `${req.prompt}\n\nYour previous reply was invalid (${issue}). Reply with valid JSON only.`;

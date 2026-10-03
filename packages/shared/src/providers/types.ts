@@ -1,4 +1,4 @@
-import type { ZodType } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 
 export interface Capabilities {
   maxReferenceImages: number;
@@ -35,7 +35,7 @@ export interface TextProvider {
   id: string;
   capabilities(): Capabilities;
   complete(req: TextRequest): Promise<string>;
-  completeJson<T>(req: TextRequest, schema: ZodType<T>): Promise<T>;
+  completeJson<T>(req: TextRequest, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T>;
   testKey(): Promise<void>;
 }
 

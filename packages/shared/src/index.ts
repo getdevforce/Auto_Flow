@@ -6,3 +6,4 @@ export * from './remote-config';
 export * from './providers';
 export * from './queue';
 export * from './create';
+export * from './bible';

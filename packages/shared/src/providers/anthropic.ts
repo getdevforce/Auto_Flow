@@ -7,7 +7,7 @@
  * origins). The extension's host permission may make it unnecessary; confirm with a real key (docs/qa-checklist.md).
  * Notes: forced tool_choice is rejected on Opus/Sonnet 5.5, so JSON uses output_config.format. `thinking` is omitted.
  */
-import type { ZodType } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ProviderError } from '../errors';
 import { toBase64 } from './bytes';
@@ -81,7 +81,7 @@ export class AnthropicProvider implements TextProvider {
 
   complete(req: TextRequest): Promise<string> { return this.send(req); }
 
-  async completeJson<T>(req: TextRequest, schema: ZodType<T>): Promise<T> {
+  async completeJson<T>(req: TextRequest, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T> {
     const jsonSchema = zodToJsonSchema(schema, { $refStrategy: 'none', target: 'jsonSchema7' });
     const extra = { output_config: { format: { type: 'json_schema', schema: jsonSchema } } };
     let lastIssue = '';
