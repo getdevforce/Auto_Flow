@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FeatureFlags\Pages;
 
+use App\Filament\Concerns\ExportsCsv;
 use App\Filament\Concerns\PublishesRemoteConfig;
 use App\Filament\Resources\FeatureFlags\FeatureFlagResource;
 use Filament\Actions\CreateAction;
@@ -9,12 +10,13 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListFeatureFlags extends ListRecords
 {
+    use ExportsCsv;
     use PublishesRemoteConfig;
 
     protected static string $resource = FeatureFlagResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [$this->publishAction(), CreateAction::make()];
+        return [$this->exportCsvAction(), $this->publishAction(), CreateAction::make()];
     }
 }

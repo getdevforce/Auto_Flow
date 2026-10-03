@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\Users\RelationManagers;
+namespace App\Filament\Resources\Support\RelationManagers;
 
-use App\Filament\Resources\Users\UserResource;
+use App\Filament\Resources\Support\SupportResource;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -22,9 +22,7 @@ class NotesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->columns([TextColumn::make('body')->wrap(), TextColumn::make('created_at')->dateTime()])
-            ->headerActions([
-                CreateAction::make()->visible(fn () => UserResource::canAct())->mutateDataUsing(fn (array $data) => $data + ['author_id' => auth()->id()]),
-            ]);
+            ->columns([TextColumn::make('kind')->badge(), TextColumn::make('body')->wrap(), TextColumn::make('created_at')->dateTime()])
+            ->headerActions([CreateAction::make()->label('Add internal note')->visible(fn () => SupportResource::canAct())->mutateDataUsing(fn (array $data) => $data + ['author_id' => auth()->id(), 'kind' => 'note'])]);
     }
 }

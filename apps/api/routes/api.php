@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\TelemetryController;
 use App\Http\Controllers\Api\TemplateController;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('config', [ConfigController::class, 'show'])->middleware('throttle:60,1');
+
+    Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:5,1');
 
     Route::middleware('throttle:30,1')->group(function () {
         Route::post('telemetry', [TelemetryController::class, 'ingest']);

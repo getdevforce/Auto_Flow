@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Templates\Pages;
 
+use App\Filament\Concerns\ExportsCsv;
 use App\Filament\Resources\Templates\TemplateResource;
 use App\Models\Template;
 use App\Models\TemplateCategory;
@@ -14,11 +15,13 @@ use Illuminate\Support\Facades\Storage;
 
 class ListTemplates extends ListRecords
 {
+    use ExportsCsv;
+
     protected static string $resource = TemplateResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [
+        return [$this->exportCsvAction(),
             Action::make('export')->label('Export JSON')->action(function () {
                 $rows = Template::with('category')->get()->map(fn (Template $t) => [
                     ...$t->only(Template::REVISED), 'category' => $t->category?->slug, 'status' => $t->status,

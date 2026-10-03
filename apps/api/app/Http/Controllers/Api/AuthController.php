@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\DeviceEnrollment;
 use Illuminate\Auth\Events\Registered;
@@ -27,7 +28,7 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
-        if (! config('frameloom.signups_enabled', true)) {
+        if (! Setting::get('signups_enabled', config('frameloom.signups_enabled', true))) {
             return response()->json(['error' => ['code' => 'signups_closed', 'message' => 'Sign-ups are closed right now.']], 403);
         }
         $data = $request->validate([

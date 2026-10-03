@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RegistryModels\Pages;
 
+use App\Filament\Concerns\ExportsCsv;
 use App\Filament\Resources\RegistryModels\RegistryModelResource;
 use App\Services\RemoteConfigPublisher;
 use Filament\Actions\Action;
@@ -11,11 +12,13 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListRegistryModels extends ListRecords
 {
+    use ExportsCsv;
+
     protected static string $resource = RegistryModelResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [
+        return [$this->exportCsvAction(),
             Action::make('publish')
                 ->label('Publish to extensions')
                 ->visible(fn () => RegistryModelResource::canCreate())
