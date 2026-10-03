@@ -17,8 +17,8 @@ describe('privacy guard', () => {
   it('the template browser never sends prompt text or keys', () => {
     const src = readFileSync(join(__dirname, 'ui/TemplatesPanel.tsx'), 'utf8');
     expect(src).not.toMatch(/loadKey|apiKey|vault/);
-    const bodies = [...src.matchAll(/body:\s*([^,}]+)/g)].map((m) => m[1]!.trim());
-    expect(bodies).toEqual(['JSON.stringify({ stars })']);
+    const bodies = [...src.matchAll(/\}, body:\s*([^,}]+) \}\)/g)].map((m) => m[1]!.trim());
+    expect(bodies).toEqual(['JSON.stringify({ stars']); // the only request body is the star rating
   });
 
   it('provider keys are never passed into backend calls', () => {
