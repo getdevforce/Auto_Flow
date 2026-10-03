@@ -112,8 +112,9 @@ async function fail(run: RunRow, shot: ShotRow, stage: 'keyframe' | 'video' | 'u
     await log(run.id, `Shot ${shot.seq}: switched to fallback model ${decision.model}.`);
   } else {
     const suggestion = kind === 'policy_rejected' ? await suggestRewrite(run, fresh, decision.reason) : undefined;
-    await db.shots.update(shot.id, { status: 'flagged', flagReason: decision.reason, suggestedRewrite: suggestion });
-    await log(run.id, `Shot ${shot.seq} flagged: ${decision.reason}`);
+    const reason = kind === 'transient' || kind === 'rate_limited' ? `Kept failing after ${fresh.retries} retries: ${decision.reason.replace(/\s*Retrying\.?$/, '')}` : decision.reason;
+    await db.shots.update(shot.id, { status: 'flagged', flagReason: reason, suggestedRewrite: suggestion });
+    await log(run.id, `Shot ${shot.seq} flagged: ${reason}`);
   }
   return true;
 }

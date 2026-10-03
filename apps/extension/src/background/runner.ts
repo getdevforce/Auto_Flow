@@ -80,7 +80,7 @@ export async function runLoop(): Promise<void> {
           engine = new QueueEngine({
             pollIntervalMs: pollMs,
             store: new RunStore(run.id), executor, breaker: new CircuitBreaker(5), budget: new BudgetGuard(run.budgetUsd, spent),
-            concurrency: { openai: 2, custom: 2, anthropic: 2 },
+            concurrency: { openai: 2, custom: 2, anthropic: 2, fal: 3 },
             onEvent: (e) => { if (e.type === 'paused') void db.runs.update(run.id, { state: 'paused', pausedReason: e.detail }); },
           });
           engines.set(run.id, engine);

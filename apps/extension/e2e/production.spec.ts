@@ -161,6 +161,7 @@ test('a failing shot is retried, retried with a plainer prompt, then flagged; th
   const shots = await shotsOf(page);
   expect(shots.map((s) => s.status)).toEqual(['done', 'done', 'flagged', 'done', 'done', 'done']);
   expect(shots[2]!.retries).toBeGreaterThanOrEqual(1);
+  expect(shots[2]!.flagReason).toContain('Kept failing after');
 });
 
 test('circuit breaker pauses the run after consecutive failures across different shots, and resume continues', async () => {
