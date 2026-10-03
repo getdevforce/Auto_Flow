@@ -776,6 +776,447 @@
                     }
                 }
             }
+        },
+        "/v1/templates": {
+            "get": {
+                "operationId": "template.index",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "tag",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 50
+                        }
+                    },
+                    {
+                        "name": "difficulty",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "prompt",
+                                "workflow",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "featured",
+                                "trending",
+                                "new",
+                                "popular",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "kind": {
+                                                        "type": "string"
+                                                    },
+                                                    "summary": {
+                                                        "type": "string"
+                                                    },
+                                                    "category": {
+                                                        "type": "string"
+                                                    },
+                                                    "tags": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string"
+                                                                },
+                                                                "minItems": 0,
+                                                                "maxItems": 0
+                                                            }
+                                                        ]
+                                                    },
+                                                    "difficulty": {
+                                                        "type": "string"
+                                                    },
+                                                    "featured": {
+                                                        "type": "string"
+                                                    },
+                                                    "trending": {
+                                                        "type": "string"
+                                                    },
+                                                    "thumbnail_url": {
+                                                        "type": "string"
+                                                    },
+                                                    "use_count": {
+                                                        "type": "string"
+                                                    },
+                                                    "rating": {
+                                                        "type": [
+                                                            "number",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "published_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "body": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "slug",
+                                                    "title",
+                                                    "kind",
+                                                    "summary",
+                                                    "category",
+                                                    "tags",
+                                                    "difficulty",
+                                                    "featured",
+                                                    "trending",
+                                                    "thumbnail_url",
+                                                    "use_count",
+                                                    "rating",
+                                                    "published_at",
+                                                    "body"
+                                                ]
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "page",
+                                                "last_page",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/templates/{slug}": {
+            "get": {
+                "operationId": "template.show",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slug": {
+                                            "type": "string"
+                                        },
+                                        "title": {
+                                            "type": "string"
+                                        },
+                                        "kind": {
+                                            "type": "string"
+                                        },
+                                        "summary": {
+                                            "type": "string"
+                                        },
+                                        "category": {
+                                            "type": "string"
+                                        },
+                                        "tags": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                }
+                                            ]
+                                        },
+                                        "difficulty": {
+                                            "type": "string"
+                                        },
+                                        "featured": {
+                                            "type": "string"
+                                        },
+                                        "trending": {
+                                            "type": "string"
+                                        },
+                                        "thumbnail_url": {
+                                            "type": "string"
+                                        },
+                                        "use_count": {
+                                            "type": "string"
+                                        },
+                                        "rating": {
+                                            "type": [
+                                                "number",
+                                                "null"
+                                            ]
+                                        },
+                                        "published_at": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "body": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "slug",
+                                        "title",
+                                        "kind",
+                                        "summary",
+                                        "category",
+                                        "tags",
+                                        "difficulty",
+                                        "featured",
+                                        "trending",
+                                        "thumbnail_url",
+                                        "use_count",
+                                        "rating",
+                                        "published_at",
+                                        "body"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/templates/{slug}/use": {
+            "post": {
+                "operationId": "template.use",
+                "summary": "Counts a use. Carries no user data: only the template's own counter changes",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "use_count": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "use_count"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/templates/{slug}/rate": {
+            "post": {
+                "operationId": "template.rate",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "stars": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                    }
+                                },
+                                "required": [
+                                    "stars"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rating": {
+                                            "type": [
+                                                "number",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "rating"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
         }
     },
     "components": {
