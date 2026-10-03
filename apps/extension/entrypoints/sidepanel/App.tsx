@@ -7,6 +7,7 @@ import { TemplatesPanel } from '../../src/ui/TemplatesPanel';
 import { CinemaPanel } from '../../src/ui/CinemaPanel';
 import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
+import { dismissAnnouncement, updateRequired, useConfig } from '../../src/config-store';
 import { isTelemetryEnabled, setTelemetryEnabled, track, flushTelemetry } from '../../src/telemetry';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
@@ -21,6 +22,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>(remembered);
   const [session, setSession] = useState<Session | undefined>();
   const [cfg, setCfg] = useState<string>('Loading configuration');
+  const { config, announcements, load } = useConfig();
   const [err, setErr] = useState('');
   const [share, setShare] = useState(true);
 
@@ -30,6 +32,7 @@ export function App() {
     track('app_opened');
     void flushTelemetry();
     fetchConfig().then((r) => setCfg(`Config v${r.config.version} (${r.source})`));
+    void load();
   }, []);
   useEffect(() => { try { localStorage.setItem('tab', tab); } catch { /* storage can be unavailable; the tab simply is not remembered */ } }, [tab]);
 
@@ -56,6 +59,18 @@ export function App() {
         <h1 className="text-lg font-semibold">{brand.productName}</h1>
         <p className="font-mono text-[11px] text-muted" data-testid="config-status">{cfg}</p>
       </header>
+      {updateRequired(config) && (
+        <p role="alert" className="mt-3 rounded-md border border-line bg-raised p-2 text-danger" data-testid="update-required">
+          {config.release.message ?? 'This version is no longer supported. Update the extension to keep generating.'}
+        </p>
+      )}
+      {announcements.map((a) => (
+        <aside key={a.key} className="mt-3 rounded-md border border-line bg-raised p-2" data-testid="announcement">
+          <strong>{a.title}</strong>
+          <p className="text-muted">{a.body}</p>
+          {a.dismissible && <button className="underline" onClick={() => void dismissAnnouncement(a.key)}>Dismiss</button>}
+        </aside>
+      ))}
       <div role="tablist" aria-label="Sections" className="mt-3 flex flex-wrap gap-1 border-b border-line" onKeyDown={onKey}>
         {TABS.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}

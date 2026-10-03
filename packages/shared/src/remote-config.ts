@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { Dialect } from './director/dialect';
+import { Preset } from './cinema/presets';
 
 const Capabilities = z.object({
   maxReferenceImages: z.number().int().min(0).default(0),
@@ -28,16 +30,17 @@ export const RemoteConfigSchema = z.object({
   schema: z.literal(1),
   minSupportedVersion: z.string(),
   // PHP serialises an empty map as [], so accept that as an empty record.
-  featureFlags: z.preprocess((v) => (Array.isArray(v) && v.length === 0 ? {} : v), z.record(z.boolean())).default({}),
+  featureFlags: z.preprocess((v) => (Array.isArray(v) && v.length === 0 ? {} : v), z.record(z.union([z.boolean(), z.object({ enabled: z.boolean(), plans: z.array(z.string()).nullish(), percent: z.number().min(0).max(100).optional() })]))).default({}),
+  release: z.object({ current: z.string().optional(), minSupported: z.string().optional(), message: z.string().optional(), changelog: z.string().optional() }).default({}),
   announcements: z.array(z.object({ id: z.string(), title: z.string(), body: z.string(), dismissible: z.boolean().default(true) })).default([]),
   providers: z.array(z.object({ id: z.string(), label: z.string(), kinds: z.array(z.string()) })).default([]),
   models: z.array(ModelEntry).default([]),
   presets: z.object({
-    camera: z.array(z.unknown()).default([]),
-    effects: z.array(z.unknown()).default([]),
-    styles: z.array(z.unknown()).default([]),
+    camera: z.array(Preset).default([]),
+    effects: z.array(Preset).default([]),
+    styles: z.array(Preset).default([]),
   }).default({}),
-  dialects: z.array(z.unknown()).default([]),
+  dialects: z.array(Dialect).default([]),
 });
 export type RemoteConfig = z.infer<typeof RemoteConfigSchema>;
 

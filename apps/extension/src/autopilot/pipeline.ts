@@ -8,6 +8,7 @@ import { loadKey } from '../keys';
 import { vault } from '../services';
 import { CachingTextProvider } from './llm-cache';
 import { track } from '../telemetry';
+import { assertSupported } from '../config-store';
 import { defaultSettings, driveProduction } from './shots';
 import type { RunSettings } from '../db/db';
 
@@ -35,6 +36,7 @@ async function log(runId: string, text: string): Promise<void> {
 }
 
 export async function startAutopilot(s: AutopilotStart): Promise<string> {
+  await assertSupported();
   const id = crypto.randomUUID();
   await db.runs.put({
     id, name: s.project, project: s.project, state: 'draft', budgetUsd: s.budgetUsd, nameTemplate: '{project}/{seq}_{scene}_{shot}',

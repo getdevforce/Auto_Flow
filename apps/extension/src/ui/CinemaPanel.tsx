@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ALL_BUNDLED_PRESETS, anglesPrompt, stylizePrompt, visiblePresets, wordDiff,
+  anglesPrompt, stylizePrompt, visiblePresets, wordDiff,
   type CinemaSettings, type Preset, type ProviderId, type RefineResult, type Strength,
 } from '@frameloom/shared';
 import { directorRefine } from '../autopilot/director';
 import { runImageTool } from '../autopilot/tools';
 import { track } from '../telemetry';
+import { flagOn, presetsOf, useConfig } from '../config-store';
 
 const SIZES = ['', 'extreme_close', 'close', 'medium_close', 'medium', 'wide', 'extreme_wide'];
 const field = 'rounded-md border border-line bg-surface px-2 py-1';
@@ -25,7 +26,10 @@ export function CinemaPanel() {
   const [busy, setBusy] = useState(false);
   // Controls are shown only for what the chosen target can do; a video-only control is hidden for an image target.
   const [target, setTarget] = useState<'image' | 'video'>('video');
-  const presets = useMemo(() => visiblePresets(ALL_BUNDLED_PRESETS, { video: target === 'video', image: true, lipSync: false, firstLastFrame: false }), [target]);
+  const config = useConfig((c) => c.config);
+  const presets = useMemo(() => visiblePresets(presetsOf(config), { video: target === 'video', image: true, lipSync: false, firstLastFrame: false }), [target, config]);
+  const [toolsOn, setToolsOn] = useState(true);
+  useEffect(() => { void flagOn(config, 'image_tools').then(setToolsOn); }, [config]);
   const cameras = presets.filter((p) => p.kind === 'camera');
   const set = (k: keyof CinemaSettings) => (e: React.ChangeEvent<HTMLInputElement>) => setCinema((c) => ({ ...c, [k]: e.target.value }));
   const effective: CinemaSettings = { ...cinema, movement: cameras.find((c) => c.id === cameraId)?.prompt ?? cinema.movement };
@@ -81,7 +85,7 @@ export function CinemaPanel() {
             : <label className="grid gap-1">Final prompt (edit freely)<textarea data-testid="final" value={accepted} onChange={(e) => setAccepted(e.target.value)} rows={4} className={field} /></label>}
         </div>
       )}
-      <ImageTools />
+      {toolsOn && <ImageTools />}
     </section>
   );
 }
@@ -94,7 +98,8 @@ function ImageTools() {
   const [prov, setProv] = useState<ProviderId>('openai');
   const [model, setModel] = useState('');
   const [msg, setMsg] = useState('');
-  const styles = ALL_BUNDLED_PRESETS.filter((p) => p.kind === 'style');
+  const config = useConfig((c) => c.config);
+  const styles = presetsOf(config).filter((p) => p.kind === 'style');
   const run = async (tool: 'angles' | 'stylize') => {
     if (!file) return setMsg('Choose a still first.');
     const style = styles.find((s) => s.id === styleId)!;

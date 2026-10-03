@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\DeviceController;
@@ -18,6 +19,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('throttle:60,1')->group(function () {
+        Route::get('announcements', [AnnouncementController::class, 'index']);
         Route::get('templates', [TemplateController::class, 'index']);
         Route::get('templates/{slug}', [TemplateController::class, 'show']);
         Route::post('templates/{slug}/use', [TemplateController::class, 'use']);

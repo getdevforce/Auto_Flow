@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Models\ConfigVersion;
+use App\Models\Dialect;
+use App\Models\FeatureFlag;
+use App\Models\Preset;
 use App\Models\RegistryModel;
 use App\Models\RegistryProvider;
+use App\Models\Release;
 
 /** Builds the public remote-config payload from admin-managed rows and publishes it as a new version. */
 class RemoteConfigPublisher
@@ -39,7 +43,36 @@ class RemoteConfigPublisher
                 return $entry;
             })->values()->all();
 
-        return array_merge($base, ['providers' => $providers, 'models' => $models]);
+        $presets = ['camera' => [], 'effects' => [], 'styles' => []];
+        foreach (Preset::where('status', 'published')->orderBy('slug')->get() as $p) {
+            $group = ['camera' => 'camera', 'effect' => 'effects', 'style' => 'styles'][$p->kind] ?? null;
+            if ($group) {
+                $presets[$group][] = ['id' => $p->slug, 'kind' => $p->kind, 'name' => $p->name, 'prompt' => $p->prompt, 'params' => $p->params ?: new \stdClass, 'requires' => $p->requires ?: []];
+            }
+        }
+
+        $dialects = Dialect::where('status', 'published')->orderBy('slug')->get()->map(fn (Dialect $d) => [
+            'id' => $d->slug, 'version' => $d->version, 'providerId' => $d->provider_id, 'modelPattern' => $d->model_pattern, 'kind' => $d->kind,
+            'maxChars' => $d->max_chars, 'supportsNegative' => $d->supports_negative, 'guidance' => $d->guidance,
+            ...($d->fields ? ['fields' => $d->fields] : []),
+        ])->values()->all();
+
+        $flags = [];
+        foreach (FeatureFlag::orderBy('key')->get() as $f) {
+            $flags[$f->key] = ['enabled' => $f->enabled, 'plans' => $f->plans ?: null, 'percent' => $f->rollout_percent];
+        }
+
+        $current = Release::where('is_current', true)->first();
+        $minimum = Release::where('is_minimum_supported', true)->first();
+        $release = array_filter([
+            'current' => $current?->version, 'minSupported' => $minimum?->version, 'message' => $minimum?->force_update_message, 'changelog' => $current?->changelog,
+        ], fn ($v) => $v !== null);
+
+        return array_merge($base, [
+            'providers' => $providers, 'models' => $models, 'presets' => $presets, 'dialects' => $dialects, 'featureFlags' => $flags ?: new \stdClass,
+            'release' => $release ?: new \stdClass,
+            'minSupportedVersion' => $minimum?->version ?? ($base['minSupportedVersion'] ?? '0.0.1'),
+        ]);
     }
 
     public function publish(): ConfigVersion

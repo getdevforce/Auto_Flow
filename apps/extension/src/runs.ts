@@ -1,5 +1,6 @@
 import { estimateCost, splitPrompts, type Job, type ProviderId } from '@frameloom/shared';
 import { db } from './db/db';
+import { assertSupported } from './config-store';
 import type { ImageJobInput } from './background/runner';
 
 export interface CreateRequest {
@@ -22,6 +23,7 @@ export function previewCreate(r: Pick<CreateRequest, 'promptsText' | 'count' | '
 
 /** Creates the run and its jobs in one transaction, then wakes the worker. */
 export async function startCreateRun(r: CreateRequest): Promise<string> {
+  await assertSupported();
   const { prompts } = previewCreate(r);
   if (!prompts.length) throw new Error('Add at least one prompt. Separate prompts with a blank line.');
   const runId = crypto.randomUUID();
