@@ -26,6 +26,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
       - run: vendor/bin/pint --test
+      - run: composer require --dev larastan/larastan:^3 --no-interaction -W
       - run: vendor/bin/phpstan analyse --memory-limit=1G
       - run: php artisan test
       - run: composer audit
