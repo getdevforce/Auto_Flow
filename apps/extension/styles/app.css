@@ -12,3 +12,8 @@ body { background: var(--c-bg); color: var(--c-ink); font-family: 'Instrument Sa
 :root[data-density='compact'] main .p-3 { padding: 0.5rem; }
 :root[data-density='compact'] main .gap-3 { gap: 0.5rem; }
 :focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
+/* Controls fill their grid cell instead of overflowing it. */
+main .grid > * { min-width: 0; }
+main select, main textarea, main input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']) { width: 100%; min-width: 0; box-sizing: border-box; }
+main select { text-overflow: ellipsis; }
