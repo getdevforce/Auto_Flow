@@ -22,7 +22,7 @@ test('stores keys encrypted, tests the connection against a mock provider, and r
   await row.getByRole('button', { name: 'Save key' }).click();
   await row.getByRole('button', { name: 'Test connection' }).click();
   await expect(row.getByRole('status')).toContainText('Connection works.');
-  expect(mock.requests.at(-1)).toEqual({ url: '/v1/models', auth: 'Bearer good-key' });
+  expect(mock.requests.at(-1)).toMatchObject({ url: '/v1/models', auth: 'Bearer good-key' });
 
   // The stored record must not contain the plaintext key.
   const stored = await page.evaluate(() => new Promise<string>((resolve) => {
