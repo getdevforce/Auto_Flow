@@ -10,10 +10,12 @@
 - M6 Prompt Director and cinema: Director (strength levels, dialect data, pinned phrases, deterministic checks for constraint loss/contradictions/length, cheaper self-critique pass, revert-to-user-wording, hash cache), word diff UI with accept/keep mine/edit, eval harness in CI against recorded outputs (live mode opt-in), 12 camera presets + styles + effects with capability gating, Angles and Stylize tools via reference-image edits. 2 e2e. 144 shared tests, 14 e2e total.
 - M7 Autopilot end-to-end: shot planner (continuity ledger, global sequence, duration clamp), prompt refine + compile, keyframes with optional vision scoring and retry/best-of, video via fal.ai queue adapter, draft-then-upscale with MP4 size/duration verification, local ffmpeg.wasm Lanczos fallback (verified on a real clip), pilot-scene gate, failure policy, ordered/strict download, manifest.json + concat.txt kept current, run report, progress grid with per-shot actions, privacy network-capture test. 26 e2e, 160 shared tests.
 - M8 Library and templates: library indexing of every generated image/video, search + filters (project, character, provider, album, favorites), tags, albums, storage quota readout with safe cleanup, uploads, frame extraction (first/last/any time via offscreen document), template CMS (Filament: draft/scheduled/published, categories, tags, difficulty, featured/trending, revisions with restore, JSON import as drafts/export, preview) and public API (search, filters, rate, use count), template browser with local variable filling, personal prompts library, tabbed side panel. 38 Pest, 165 shared, 30 e2e.
+- M9 Admin depth, telemetry, billing: done (see M9a to M9g notes above).
+- M10 Hardening: security review and fixes, axe and visual regression, load-time and bundle budget, production zip, CI with coverage gates, README, architecture, QA checklist, final report. Final numbers are in docs/FINAL_REPORT.md.
 ## In progress
-M9 Admin depth, telemetry, billing
+Nothing. All milestones M0 to M10 are complete on branch claude/funny-cori-5w4wcc.
 ## Next
-M10 Hardening
+Run docs/qa-checklist.md with real provider keys, then Chrome Web Store submission and deployment.
 ## Known issues
 - Sandbox has no real provider keys, no MySQL server, no Chrome Web Store, no live billing.
 - Larastan/phpstan cannot be installed in the sandbox (GitHub zipball downloads blocked by egress policy); CI installs it. Static analysis is therefore unverified locally.
