@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 $e instanceof ModelNotFoundException => 404,
                 default => 500,
             };
-            $code = match ($status) {
+            $code = $e instanceof ValidationException && $status === 401 ? 'invalid_credentials' : match ($status) {
                 401 => 'unauthenticated', 403 => 'forbidden', 404 => 'not_found', 409 => 'conflict',
                 422 => 'validation_failed', 429 => 'rate_limited', default => $status >= 500 ? 'server_error' : 'error',
             };

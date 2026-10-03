@@ -9,6 +9,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.3', extensions: 'mbstring, intl, pdo_sqlite' }
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: apps/api
+      - run: cp .env.example .env && php artisan key:generate
+        working-directory: apps/api
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm --filter @frameloom/extension build
@@ -29,6 +35,8 @@ jobs:
       - run: composer require --dev larastan/larastan:^3 --no-interaction -W
       - run: vendor/bin/phpstan analyse --memory-limit=1G
       - run: php artisan test
+      - run: php artisan scramble:export --path=../../packages/api-client/openapi.json
+      - run: git diff --exit-code ../../packages/api-client/openapi.json
       - run: composer audit
   secrets:
     runs-on: ubuntu-latest
