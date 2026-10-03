@@ -13,7 +13,11 @@ export default defineConfig({
     // Minimal on purpose. Optional power permission is requested at runtime only.
     permissions: ['storage', 'sidePanel', 'alarms', 'downloads', 'offscreen', 'unlimitedStorage'],
     optional_permissions: ['power'],
-    host_permissions: [],
+    // Fixed provider API hosts only; custom endpoints use the optional permission prompt.
+    host_permissions: [
+      'https://api.anthropic.com/*', 'https://api.openai.com/*', 'https://queue.fal.run/*', 'https://api.elevenlabs.io/*',
+      ...(process.env.WXT_E2E ? ['http://127.0.0.1/*'] : []),
+    ],
     optional_host_permissions: ['https://*/*'],
     action: { default_title: brand.productName },
     side_panel: { default_path: 'sidepanel.html' },

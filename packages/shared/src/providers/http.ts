@@ -1,4 +1,4 @@
-import { ProviderError, classifyHttp } from '../errors';
+import { ProviderError, classifyHttp, type ErrorKind } from '../errors';
 
 export type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -14,14 +14,14 @@ export function parseRetryAfter(value: string | null, now = Date.now()): number 
 }
 
 /**
- * Fetch that converts failures into ProviderError. `policyHint` lets an adapter flag provider-specific
- * policy rejections that the status code alone cannot reveal.
+ * Fetch that converts failures into ProviderError. `override` lets an adapter reclassify provider-specific
+ * failures (policy rejections, spend caps) that the status code alone cannot reveal.
  */
 export async function request(
   { provider, fetch }: HttpOpts,
   url: string,
   init: RequestInit,
-  policyHint?: (status: number, body: string) => boolean,
+  override?: (status: number, body: string, headers: Headers) => ErrorKind | undefined,
 ): Promise<Response> {
   let res: Response;
   try {
@@ -31,7 +31,7 @@ export async function request(
   }
   if (res.ok) return res;
   const body = await res.text().catch(() => '');
-  const kind = policyHint?.(res.status, body) ? 'policy_rejected' : classifyHttp(res.status, body);
+  const kind = override?.(res.status, body, res.headers) ?? classifyHttp(res.status, body);
   throw new ProviderError(kind, humanMessage(provider, kind, res.status, body), {
     status: res.status, provider, retryAfterMs: parseRetryAfter(res.headers.get('retry-after')),
   });

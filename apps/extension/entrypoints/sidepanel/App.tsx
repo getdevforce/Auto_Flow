@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { brand } from '../../src/brand';
+import { KeysPanel } from '../../src/ui/KeysPanel';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
 export function App() {
@@ -41,6 +42,8 @@ export function App() {
           <button className="rounded-md bg-accent px-3 py-1.5 text-accent-ink">Sign in</button>
         </form>
       )}
+      <h2 className="mt-6 text-[15px] font-semibold">Settings: keys</h2>
+      <KeysPanel />
     </main>
   );
 }

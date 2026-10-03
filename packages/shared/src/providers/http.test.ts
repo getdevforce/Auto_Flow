@@ -13,13 +13,13 @@ describe('request', () => {
     await expect(request(opts(resp(s, 'x')), 'u', {})).rejects.toMatchObject({ kind: k });
   });
   it('carries retry-after and names the fix for auth errors', async () => {
-    const err = await request(opts(resp(429, '', { 'retry-after': '3' })), 'u', {}).catch((e) => e as ProviderError);
+    const err = (await request(opts(resp(429, '', { 'retry-after': '3' })), 'u', {}).catch((e) => e)) as ProviderError;
     expect(err.opts.retryAfterMs).toBe(3000);
-    const auth = await request(opts(resp(401)), 'u', {}).catch((e) => e as ProviderError);
+    const auth = (await request(opts(resp(401)), 'u', {}).catch((e) => e)) as ProviderError;
     expect(auth.message).toContain('Settings > Keys');
   });
   it('lets adapters flag policy rejections', async () => {
-    await expect(request(opts(resp(400, 'moderation_blocked')), 'u', {}, (_s, b) => b.includes('moderation'))).rejects.toMatchObject({ kind: 'policy_rejected' });
+    await expect(request(opts(resp(400, 'moderation_blocked')), 'u', {}, (_s, b) => (b.includes('moderation') ? 'policy_rejected' : undefined))).rejects.toMatchObject({ kind: 'policy_rejected' });
   });
   it('treats network failures as transient', async () => {
     await expect(request(opts(new TypeError('boom')), 'u', {})).rejects.toMatchObject({ kind: 'transient' });
