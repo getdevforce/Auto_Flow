@@ -1,0 +1,35 @@
+{
+  "project": "Untitled film",
+  "generatedAt": "2026-10-03T14:37:43.803Z",
+  "mode": "draft_upscale",
+  "estimate": true,
+  "totalCostUsd": 0,
+  "shots": [
+    {
+      "seq": 1,
+      "sceneIndex": 1,
+      "shotIndex": 1,
+      "status": "done",
+      "file": "Untitled film/001_1_1.mp4",
+      "prompt": "Ada Voss acts in scene 1 shot 1, 35mm lens, slow tracking shot, tense mood",
+      "originalPrompt": "Ada Voss acts in scene 1 shot 1",
+      "negativePrompt": "blur",
+      "rationale": "Filled in lens, camera and mood.",
+      "costUsd": 0,
+      "durationSec": 1,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "seq": 2,
+      "sceneIndex": 1,
+      "shotIndex": 2,
+      "status": "generating",
+      "prompt": "Ada Voss acts in scene 1 shot 2, 35mm lens, slow tracking shot, tense mood",
+      "originalPrompt": "Ada Voss acts in scene 1 shot 2",
+      "negativePrompt": "blur",
+      "rationale": "Filled in lens, camera and mood.",
+      "costUsd": 0
+    }
+  ]
+}
