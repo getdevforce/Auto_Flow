@@ -1,8 +1,9 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 async function setupKey(page: Page) {
+  await openTab(page, 'Settings');
   await page.getByRole('button', { name: 'Create vault' }).click();
   const row = page.getByTestId('key-custom');
   await row.getByLabel('Base URL').fill('http://127.0.0.1:9101/v1');
@@ -14,6 +15,7 @@ async function downloads(ctx: BrowserContext) {
   return sw!.evaluate(async () => (await chrome.downloads.search({})).map((d) => d.filename.split(/[\\/]/).slice(-2).join('/')));
 }
 async function fillCreate(page: Page, prompts: string, extra: { budget?: string; price?: string } = {}) {
+  await openTab(page, 'Create');
   const create = page.getByRole('region', { name: 'Create' });
   await create.getByLabel(/^Prompts/).fill(prompts);
   await create.getByLabel('Provider').selectOption('custom');

@@ -1,6 +1,7 @@
 import { BudgetGuard, CircuitBreaker, QueueEngine, renderName, type Job, type JobStore } from '@frameloom/shared';
 import { db, type JobRow } from '../db/db';
 import { drive } from '../autopilot/pipeline';
+import { indexLibrary } from '../library/store';
 
 export type { ImageJobInput } from './executor';
 import type { ImageJobInput } from './executor';
@@ -12,7 +13,7 @@ class RunStore implements JobStore {
   async all(): Promise<Job[]> { return db.jobs.where('runId').equals(this.runId).toArray(); }
   async put(job: Job): Promise<void> {
     const prev = await db.jobs.get(job.id);
-    await db.jobs.put({ ...job, downloaded: prev?.downloaded, files: prev?.files });
+    await db.jobs.put({ ...job, downloaded: prev?.downloaded, files: prev?.files, indexed: prev?.indexed });
   }
 }
 
@@ -90,6 +91,7 @@ export async function runLoop(): Promise<void> {
         // Finished jobs may unlock the next autopilot step, so go around again.
         if (r.started > 0 || r.polled > 0) progressed = true;
         await downloadFinished(run.id);
+        await indexLibrary(run.id);
         const after = await db.jobs.where('runId').equals(run.id).toArray();
         if (after.some(open) && !r.paused) openJobs++;
         if (r.nextWakeAt !== null) wake = wake === null ? r.nextWakeAt : Math.min(wake, r.nextWakeAt);

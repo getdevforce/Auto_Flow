@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { promptsFromCsv, type ProviderId } from '@frameloom/shared';
 import { db } from '../db/db';
+import { useDraft } from '../draft';
 import { previewCreate, resumeRun, startCreateRun } from '../runs';
 
 export function CreatePanel() {
@@ -16,6 +17,8 @@ export function CreatePanel() {
   const runs = useLiveQuery(() => db.runs.orderBy('createdAt').reverse().limit(5).toArray(), []);
   const jobs = useLiveQuery(() => db.jobs.toArray(), []);
   useEffect(() => { setErr(''); }, [text]);
+  const draft = useDraft((d) => d.text);
+  useEffect(() => { if (draft) setText(draft); }, [draft]);
 
   const preview = previewCreate({ promptsText: text, count, priceUsd: price ? Number(price) : undefined });
 

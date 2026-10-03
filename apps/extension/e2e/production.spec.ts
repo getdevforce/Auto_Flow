@@ -1,11 +1,12 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider, type MockProvider } from './mock-provider';
 
 const FAL_BASE = 'http://127.0.0.1:9101/fal';
 
 async function setupKeys(page: Page) {
+  await openTab(page, 'Settings');
   await page.getByRole('button', { name: 'Create vault' }).click();
   const custom = page.getByTestId('key-custom');
   await custom.getByLabel('Base URL').fill('http://127.0.0.1:9101/v1');
@@ -19,6 +20,7 @@ async function setupKeys(page: Page) {
 
 interface Opts { autonomy?: 'manual' | 'checkpoints' | 'full_auto'; script?: string; mode?: 'native' | 'draft_upscale'; strict?: boolean; budget?: string; upscaleModel?: string; pVid?: string }
 async function startRun(page: Page, o: Opts = {}) {
+  await openTab(page, 'Autopilot');
   const ap = page.getByRole('region', { name: 'Autopilot' });
   await ap.getByLabel('Script or idea').fill(o.script ?? FIXTURE_SCRIPT);
   await ap.getByLabel('Autonomy').selectOption(o.autonomy ?? 'checkpoints');

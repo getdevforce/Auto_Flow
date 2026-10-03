@@ -14,3 +14,4 @@ export * from './autopilot';
 export * from './director';
 export * from './cinema';
 export * from './planning';
+export * from './library';

@@ -7,4 +7,5 @@ export CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync MAIL_MAILER=
 rm -f "$DB_DATABASE" && touch "$DB_DATABASE"
 php artisan migrate:fresh --seed --force
 php artisan db:seed --class='Database\Seeders\Testing\E2eTestUserSeeder' --force
+php artisan db:seed --class='Database\Seeders\Testing\E2eTemplatesSeeder' --force
 exec php artisan serve --host=127.0.0.1 --port="${E2E_API_PORT:-8000}"

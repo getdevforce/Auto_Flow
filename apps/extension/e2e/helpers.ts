@@ -23,3 +23,5 @@ export async function openSidePanel(ctx: BrowserContext, id: string): Promise<Pa
   await page.goto(`chrome-extension://${id}/sidepanel.html`);
   return page;
 }
+
+export const openTab = (page: Page, name: string) => page.getByRole('tab', { name, exact: true }).click();

@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { expect, test } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 /** Stands in for the backend and records every byte the extension sends it. */
@@ -34,6 +34,7 @@ test('a full autopilot run never sends keys, script text or prompts to the backe
   await page.reload();
   await expect(page.getByTestId('config-status')).toContainText('Config v1 (network)');
 
+  await openTab(page, 'Settings');
   await page.getByLabel('Email').fill('someone@example.com');
   await page.getByLabel('Password').fill('a-password-123');
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -45,6 +46,7 @@ test('a full autopilot run never sends keys, script text or prompts to the backe
     await r.getByLabel('API key').fill('good-key');
     await r.getByRole('button', { name: 'Save key' }).click();
   }
+  await openTab(page, 'Autopilot');
   const ap = page.getByRole('region', { name: 'Autopilot' });
   await ap.getByLabel('Script or idea').fill(FIXTURE_SCRIPT);
   await ap.getByLabel('Autonomy').selectOption('full_auto');

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 const hasFfmpeg = (() => { try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
@@ -19,6 +19,7 @@ test('local ffmpeg.wasm resize turns a real 640x360 draft into 1280x720 when no 
   const { ctx, id } = await launchExtension();
   const page = await openSidePanel(ctx, id);
   await page.evaluate(() => new Promise<void>((r) => { const o = indexedDB.open('frameloom'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ key: 'pollMs', value: 300 }); t.oncomplete = () => r(); }; }));
+  await openTab(page, 'Settings');
   await page.getByRole('button', { name: 'Create vault' }).click();
   for (const [row, base] of [['custom', 'http://127.0.0.1:9101/v1'], ['fal', 'http://127.0.0.1:9101/fal']] as const) {
     const r = page.getByTestId(`key-${row}`);
@@ -26,6 +27,7 @@ test('local ffmpeg.wasm resize turns a real 640x360 draft into 1280x720 when no 
     await r.getByLabel('API key').fill('good-key');
     await r.getByRole('button', { name: 'Save key' }).click();
   }
+  await openTab(page, 'Autopilot');
   const ap = page.getByRole('region', { name: 'Autopilot' });
   // One scene only keeps the wasm run short.
   await ap.getByLabel('Script or idea').fill(FIXTURE_SCRIPT.split('EXT. DOCK - NIGHT')[0]!);

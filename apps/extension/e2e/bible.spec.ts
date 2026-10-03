@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 
 test('characters lock into immutable versions; edits mint a new version', async () => {
   const { ctx, id } = await launchExtension();
   const page = await openSidePanel(ctx, id);
+  await openTab(page, 'Bible');
   await expect(page.getByText('No characters yet')).toBeVisible();
   await page.getByLabel('New character name').fill('Ada Voss');
   await page.getByRole('button', { name: 'Add' }).click();

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Shot, Autonomy, CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion, Run, ScriptAnalysis } from '@frameloom/shared';
+import type { LibraryItem, Shot, Autonomy, CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion, Run, ScriptAnalysis } from '@frameloom/shared';
 import type { VaultRecord, VaultStorage } from '../vault/vault';
 
 interface KvRow { key: string; value: unknown }
@@ -53,11 +53,14 @@ export interface ShotRow {
   draftAssetId?: string; finalAssetId?: string; flagReason?: string; downloaded?: boolean; downloadedAt?: number; file?: string;
   costUsd: number; width?: number; height?: number; durationSec?: number; retries: number;
 }
+export interface LibraryRow extends LibraryItem { assetId: string }
+export interface AlbumRow { id: string; name: string; createdAt: number }
+export interface PromptRow { id: string; title: string; text: string; kind: 'prompt' | 'snippet'; createdAt: number }
 export interface AnalysisRow { runId: string; analysis: ScriptAnalysis }
 export interface LlmCacheRow { hash: string; text: string }
 export interface AssetRow { id: string; jobId: string; mime: string; blob: Blob }
 /** `files` records the requested download paths; the browser may rename them on collision or in automation. */
-export interface JobRow extends Job { downloaded?: boolean; files?: string[] }
+export interface JobRow extends Job { downloaded?: boolean; files?: string[]; indexed?: boolean }
 
 /** Single local database. Tables are added per milestone; every schema change bumps the version. */
 export class AppDb extends Dexie {
@@ -65,6 +68,9 @@ export class AppDb extends Dexie {
   runs!: Table<RunRow, string>;
   jobs!: Table<JobRow, string>;
   assets!: Table<AssetRow, string>;
+  library!: Table<LibraryRow, string>;
+  albums!: Table<AlbumRow, string>;
+  prompts!: Table<PromptRow, string>;
   shots!: Table<ShotRow, string>;
   analyses!: Table<AnalysisRow, string>;
   llmCache!: Table<LlmCacheRow, string>;
@@ -75,6 +81,12 @@ export class AppDb extends Dexie {
   constructor(name = 'frameloom') {
     super(name);
     this.version(1).stores({ kv: 'key' });
+    this.version(6).stores({
+      kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
+      characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',
+      analyses: 'runId', llmCache: 'hash', shots: 'id, runId, seq, status',
+      library: 'id, assetId, createdAt, project, favorite, *tags, *albumIds', albums: 'id', prompts: 'id, kind, createdAt',
+    });
     this.version(5).stores({
       kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
       characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',

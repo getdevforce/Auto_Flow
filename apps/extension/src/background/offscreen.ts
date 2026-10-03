@@ -20,3 +20,10 @@ export async function localResize(assetId: string, width: number, height: number
   if (!r?.ok) throw new Error(r?.error ?? 'The local resizer did not respond.');
   return r.assetId as string;
 }
+
+export async function extractFrame(assetId: string, at: 'first' | 'last' | number, outId: string): Promise<string> {
+  await ensure();
+  const r = (await chrome.runtime.sendMessage({ target: 'offscreen', type: 'extract-frame', assetId, at, outId })) as { ok: boolean; assetId?: string; error?: string };
+  if (!r?.ok) throw new Error(r?.error ?? 'Frame extraction did not respond.');
+  return r.assetId as string;
+}

@@ -34,6 +34,29 @@ async function localResize(assetId: string, width: number, height: number, outId
   return outId;
 }
 
+/** Draws one frame of a stored video to a PNG asset. `at` is 'first', 'last' or seconds from the start. */
+async function extractFrame(assetId: string, at: 'first' | 'last' | number, outId: string): Promise<string> {
+  const asset = await db.assets.get(assetId);
+  if (!asset) throw new Error('That video is missing from local storage.');
+  const url = URL.createObjectURL(asset.blob);
+  try {
+    const v = document.createElement('video');
+    v.muted = true;
+    v.preload = 'auto';
+    v.src = url;
+    await new Promise<void>((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('This browser cannot decode that video.')); });
+    // Last frame: a hair before the end, since seeking to exactly `duration` can show nothing.
+    const t = at === 'first' ? 0 : at === 'last' ? Math.max(0, v.duration - 0.05) : Math.min(Math.max(0, at), v.duration);
+    await new Promise<void>((res, rej) => { v.onseeked = () => res(); v.onerror = () => rej(new Error('Could not seek in the video.')); v.currentTime = t; });
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d')!.drawImage(v, 0, 0);
+    const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not encode the frame.'))), 'image/png'));
+    await db.assets.put({ id: outId, jobId: '', mime: 'image/png', blob });
+    return outId;
+  } finally { URL.revokeObjectURL(url); }
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
   if (msg?.target !== 'offscreen') return false;
   if (msg.type === 'blob-url') {
@@ -42,6 +65,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
   }
   if (msg.type === 'local-resize') {
     localResize(msg.assetId, msg.width, msg.height, msg.outId).then((id) => respond({ ok: true, assetId: id })).catch((e: unknown) => respond({ ok: false, error: String((e as Error)?.message ?? e) }));
+    return true;
+  }
+  if (msg.type === 'extract-frame') {
+    extractFrame(msg.assetId, msg.at, msg.outId).then((id) => respond({ ok: true, assetId: id })).catch((e: unknown) => respond({ ok: false, error: String((e as Error)?.message ?? e) }));
     return true;
   }
   if (msg.type === 'revoke') { URL.revokeObjectURL(msg.url); respond(true); }

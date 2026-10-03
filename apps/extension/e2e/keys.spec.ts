@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { launchExtension, openSidePanel } from './helpers';
+import { launchExtension, openSidePanel, openTab } from './helpers';
 import { startMockProvider } from './mock-provider';
 
 test('stores keys encrypted, tests the connection against a mock provider, and removes them', async () => {
   const mock = await startMockProvider();
   const { ctx, id } = await launchExtension();
   const page = await openSidePanel(ctx, id);
+  await openTab(page, 'Settings');
 
   await page.getByRole('button', { name: 'Create vault' }).click();
   const row = page.getByTestId('key-custom');
