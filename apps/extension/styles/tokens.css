@@ -1,0 +1,22 @@
+/* Design tokens. Values are documented in docs/design-system.md. 4/8pt spacing grid. */
+:root, :root[data-theme='light'] {
+  --c-bg: #f7f7f5; --c-surface: #ffffff; --c-raised: #efefec; --c-line: #dcdcd6;
+  --c-ink: #1c1d1c; --c-muted: #62665f;
+  --c-accent: #0f6b66; --c-accent-ink: #ffffff;
+  --c-danger: #b3261e; --c-warn: #8a5a00; --c-ok: #2e6b34;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+:root[data-theme='dark'] {
+  --c-bg: #141514; --c-surface: #1b1c1b; --c-raised: #242624; --c-line: #343734;
+  --c-ink: #ecece8; --c-muted: #9a9e96;
+  --c-accent: #3db7ae; --c-accent-ink: #0b1f1d;
+  --c-danger: #f2877f; --c-warn: #e0b04f; --c-ok: #7cc785;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --c-bg: #141514; --c-surface: #1b1c1b; --c-raised: #242624; --c-line: #343734;
+    --c-ink: #ecece8; --c-muted: #9a9e96; --c-accent: #3db7ae; --c-accent-ink: #0b1f1d;
+    --c-danger: #f2877f; --c-warn: #e0b04f; --c-ok: #7cc785;
+  }
+}
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; animation-duration: 0ms !important; } }

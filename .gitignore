@@ -1,0 +1,11 @@
+node_modules
+dist
+.output
+.wxt
+coverage
+.env
+*.zip
+apps/api/vendor
+apps/api/storage/*.key
+apps/api/database/*.sqlite
+.DS_Store

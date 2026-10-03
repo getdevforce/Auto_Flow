@@ -1,0 +1,7 @@
+{
+  "productName": "Frameloom",
+  "shortName": "Frameloom",
+  "tagline": "Script in, finished sequence out.",
+  "supportEmail": "support@example.invalid",
+  "accent": { "light": "#0F6B66", "dark": "#3DB7AE" }
+}
