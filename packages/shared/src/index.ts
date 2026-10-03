@@ -11,3 +11,5 @@ export * from './script/scenes';
 export * from './script/docx';
 export * from './analysis';
 export * from './autopilot';
+export * from './director';
+export * from './cinema';
