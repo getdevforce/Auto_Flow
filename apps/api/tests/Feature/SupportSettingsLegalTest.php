@@ -132,7 +132,7 @@ it('shows the reset password page', function () {
 });
 
 it('exports the filtered table as CSV from every list page and audits it', function (string $page, string $model) {
-    $this->actingAs(who('analyst'));
+    $this->actingAs(who($model === 'users' ? 'support' : 'analyst'));
     Livewire::test($page)->callAction('exportCsv')->assertFileDownloaded();
     expect(AuditLog::where('action', 'export.csv')->count())->toBe(1);
 })->with([
@@ -159,3 +159,8 @@ it('neutralises spreadsheet formulas and flattens cells', function () {
         ->and($cell('+1'))->toBe("'+1")->and($cell('-2'))->toBe("'-2")->and($cell('@SUM(A1)'))->toBe("'@SUM(A1)")
         ->and($cell('normal'))->toBe('normal')->and($cell(null))->toBe('')->and($cell(true))->toBe('yes')->and($cell(['a' => 1]))->toBe('{"a":1}');
 });
+
+it('keeps bulk export of customer emails away from analysts and editors', function (string $role) {
+    $this->actingAs(who($role));
+    Livewire::test(ListUsers::class)->assertActionHidden('exportCsv');
+})->with(['analyst', 'editor']);

@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => 60 * 24 * 30, // tokens last 30 days; the extension signs in again after that
 
     /*
     |--------------------------------------------------------------------------

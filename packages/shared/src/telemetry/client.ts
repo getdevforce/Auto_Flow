@@ -13,7 +13,7 @@ export function sanitizeProps(props: Record<string, unknown>): TelemetryProps {
   for (const [k, v] of Object.entries(props)) {
     const def = PROPS[k];
     if (!def) continue;
-    const ok = def.type === 'string' ? typeof v === 'string' && v.length <= def.max && /^[A-Za-z0-9._:@/+\- ]*$/.test(v)
+    const ok = def.type === 'string' ? typeof v === 'string' && v.length <= def.max && /^[A-Za-z0-9._:/+\-]*$/.test(v)
       : def.type === 'int' ? Number.isInteger(v) && (v as number) >= 0 && (v as number) <= def.max
         : def.type === 'bool' ? typeof v === 'boolean' : typeof v === 'string' && def.values.includes(v);
     if (ok) out[k] = v as string | number | boolean;

@@ -10,6 +10,8 @@ import { KeysPanel } from '../../src/ui/KeysPanel';
 import { dismissAnnouncement, updateRequired, useConfig } from '../../src/config-store';
 import { isTelemetryEnabled, setTelemetryEnabled, track, flushTelemetry } from '../../src/telemetry';
 import { refreshEntitlements, usage } from '../../src/entitlements';
+import { SettingsExtras, ShortcutSheet } from '../../src/ui/SettingsExtras';
+import { applyStoredPrefs } from '../../src/prefs';
 import { sendFeedback } from '../../src/feedback';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
@@ -28,6 +30,7 @@ export function App() {
   const [err, setErr] = useState('');
   const [share, setShare] = useState(true);
   const [plan, setPlan] = useState<string>('');
+  const [sheet, setSheet] = useState(false);
   const [fbMsg, setFbMsg] = useState('');
   const [fbStatus, setFbStatus] = useState('');
 
@@ -39,6 +42,18 @@ export function App() {
     void flushTelemetry();
     fetchConfig().then((r) => setCfg(`Config v${r.config.version} (${r.source})`));
     void load();
+  }, []);
+  useEffect(() => { applyStoredPrefs(); }, []);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && e.key !== 'Escape' && !e.altKey) return;
+      if (e.altKey && /^[1-7]$/.test(e.key)) { setTab(TABS[Number(e.key) - 1] as Tab); e.preventDefault(); }
+      else if (e.altKey && e.key === ',') setTab('Settings');
+      else if (e.key === '?' && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) setSheet((v) => !v);
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
   }, []);
   useEffect(() => { try { localStorage.setItem('tab', tab); } catch { /* storage can be unavailable; the tab simply is not remembered */ } }, [tab]);
 
@@ -91,6 +106,7 @@ export function App() {
         ))}
       </div>
 
+      {sheet && <ShortcutSheet onClose={() => setSheet(false)} />}
       <div role="tabpanel" aria-label={tab}>
         {tab === 'Autopilot' && <AutopilotPanel />}
         {tab === 'Create' && <CreatePanel />}
@@ -120,6 +136,7 @@ export function App() {
               <input type="checkbox" checked={share} onChange={(e) => { setShare(e.target.checked); void setTelemetryEnabled(e.target.checked); }} />
               <span>Share anonymous usage counts. Event names and totals only: which provider and model, success or failure, run sizes. Never scripts, prompts, filenames, images or keys.</span>
             </label>
+            <SettingsExtras onShortcuts={() => setSheet(true)} />
             <h2 className="mt-6 text-[15px] font-semibold">Send feedback</h2>
             <form className="mt-2 grid gap-2" onSubmit={async (e) => {
               e.preventDefault();

@@ -8,6 +8,7 @@ use App\Models\Setting;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Links in emails must never be built from the request's Host header (reset-link poisoning).
+        if ($this->app->environment('production') || $this->app->environment('staging')) {
+            URL::forceRootUrl(config('app.url'));
+            URL::forceScheme((string) parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https');
+        }
+
         // Admin-editable email wording with {name}, {app} placeholders; sensible defaults when nothing is set.
         $fill = fn (string $t, $user) => strtr($t, ['{name}' => $user->name, '{app}' => config('brand.name')]);
         VerifyEmail::toMailUsing(function ($user, string $url) use ($fill) {

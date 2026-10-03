@@ -49,7 +49,9 @@ class AuthController extends Controller
     {
         $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], ...self::DEVICE_RULES]);
         $user = User::where('email', $data['email'])->first();
-        if (! $user || ! $user->password || ! Hash::check($data['password'], $user->password)) {
+        // Always run one hash check so response time does not reveal whether the email exists.
+        $hash = $user?->password ?: '$2y$12$Pl/OJ30d/VPKZKblxRdDfOXESxMBxwlB8JbADTrWOx.WI7SfQxvx6';
+        if (! Hash::check($data['password'], $hash) || ! $user || ! $user->password) {
             throw ValidationException::withMessages(['email' => 'Email or password is wrong.'])->status(401);
         }
 
@@ -71,6 +73,12 @@ class AuthController extends Controller
         if (! $user) {
             $user = User::create(['name' => $claims['name'] ?? $claims['email'], 'email' => $claims['email'], 'password' => Str::random(40)]);
             $user->forceFill(['plan_id' => Plan::default()->id])->save();
+        }
+        // The Google account proved ownership of this email. If a password account was registered with it before the
+        // address was ever verified, that registrant may be someone else: drop their password and sessions.
+        if ($user->email_verified_at === null && $user->exists && $user->wasRecentlyCreated === false) {
+            $user->forceFill(['password' => Str::random(40)]);
+            $user->tokens()->delete();
         }
         $user->forceFill(['google_id' => $claims['sub'], 'email_verified_at' => $user->email_verified_at ?? now()])->save();
 

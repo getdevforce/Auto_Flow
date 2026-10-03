@@ -54,6 +54,11 @@ class UserResource extends Resource
         return true;
     }
 
+    public static function canExport(): bool
+    {
+        return static::canAct();
+    }
+
     /** Roles that may act on accounts. Editors and analysts can look but not touch. */
     public static function canAct(): bool
     {

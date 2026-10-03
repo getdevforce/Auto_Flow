@@ -7,7 +7,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WebhookEvent;
-use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /** Applies verified billing events. Idempotent per event id, and tolerant of out-of-order delivery. */
@@ -21,21 +21,19 @@ class WebhookHandler
         if ($eventId === '') {
             return 'ignored';
         }
+        // Recording the event and applying it share one transaction: if applying fails, the record rolls back too, so the
+        // provider's retry is processed instead of being mistaken for a duplicate.
         try {
-            $record = WebhookEvent::create(['provider' => $provider->name(), 'event_id' => $eventId, 'type' => (string) ($payload['event_type'] ?? 'unknown'), 'payload' => $payload]);
-        } catch (QueryException) {
+            return DB::transaction(function () use ($provider, $payload, $event, $eventId) {
+                $record = WebhookEvent::create(['provider' => $provider->name(), 'event_id' => $eventId, 'type' => (string) ($payload['event_type'] ?? 'unknown'), 'payload' => $payload]);
+                $outcome = $event ? $this->apply($provider, $event) : 'ignored';
+                $record->update(['outcome' => $outcome, 'processed_at' => now()]);
+
+                return $outcome;
+            });
+        } catch (UniqueConstraintViolationException) {
             return 'duplicate'; // unique (provider, event_id): this event was already received
         }
-        if (! $event) {
-            $record->update(['outcome' => 'ignored', 'processed_at' => now()]);
-
-            return 'ignored';
-        }
-
-        $outcome = DB::transaction(fn () => $this->apply($provider, $event));
-        $record->update(['outcome' => $outcome, 'processed_at' => now()]);
-
-        return $outcome;
     }
 
     private function apply(BillingProvider $provider, BillingEvent $e): string

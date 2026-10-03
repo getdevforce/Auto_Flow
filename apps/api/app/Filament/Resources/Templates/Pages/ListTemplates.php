@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Templates\Pages;
 
 use App\Filament\Concerns\ExportsCsv;
 use App\Filament\Resources\Templates\TemplateResource;
+use App\Models\AuditLog;
 use App\Models\Template;
 use App\Models\TemplateCategory;
 use Filament\Actions\Action;
@@ -35,7 +36,9 @@ class ListTemplates extends ListRecords
                     $rows = json_decode((string) Storage::disk('local')->get($data['file']), true);
                     $n = 0;
                     foreach (is_array($rows) ? $rows : [] as $r) {
-                        if (! isset($r['slug'], $r['title'], $r['body'])) {
+                        $valid = is_array($r) && isset($r['slug'], $r['title'], $r['body']) && is_string($r['slug']) && preg_match('/^[a-z0-9-]{1,120}$/', $r['slug'])
+                            && is_string($r['title']) && mb_strlen($r['title']) <= 160 && is_array($r['body']) && in_array($r['difficulty'] ?? 'beginner', ['beginner', 'intermediate', 'advanced'], true);
+                        if (! $valid) {
                             continue;
                         }
                         $cat = isset($r['category']) ? TemplateCategory::firstOrCreate(['slug' => $r['category']], ['name' => ucfirst($r['category'])]) : null;
@@ -47,6 +50,7 @@ class ListTemplates extends ListRecords
                         $n++;
                     }
                     Storage::disk('local')->delete($data['file']);
+                    AuditLog::record('templates.imported', null, ['count' => $n]);
                     Notification::make()->title("Imported {$n} template(s) as drafts")->success()->send();
                 }),
             CreateAction::make(),

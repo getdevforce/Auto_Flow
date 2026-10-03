@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        if (in_array(env('APP_ENV'), ['production', 'staging'], true) && env('APP_URL')) {
+            $middleware->trustHosts(at: [preg_quote((string) parse_url((string) env('APP_URL'), PHP_URL_HOST), '/')]);
+        }
         $middleware->api(prepend: [CheckMaintenance::class], append: [RecordApiLatency::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

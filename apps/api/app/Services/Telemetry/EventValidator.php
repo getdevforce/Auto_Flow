@@ -38,7 +38,7 @@ class EventValidator
             }
             [$type, $limit] = $rules[$k] + [1 => null];
             $ok = match ($type) {
-                'string' => is_string($v) && mb_strlen($v) <= $limit && preg_match('/^[A-Za-z0-9._:@\/+\- ]*$/', $v) === 1,
+                'string' => is_string($v) && mb_strlen($v) <= $limit && preg_match('/^[A-Za-z0-9._:\/+\-]*$/', $v) === 1,
                 'int' => is_int($v) && $v >= 0 && $v <= $limit,
                 'bool' => is_bool($v),
                 'enum' => is_string($v) && in_array($v, $limit, true),

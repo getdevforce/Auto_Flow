@@ -41,7 +41,7 @@ class TemplateController extends Controller
             $q->whereHas('category', fn ($c) => $c->where('slug', $data['category']));
         }
         if (! empty($data['tag'])) {
-            $q->where('tags', 'like', '%"'.$data['tag'].'"%');
+            $q->where('tags', 'like', '%"'.str_replace(['%', '_'], ['\\%', '\\_'], $data['tag']).'"%');
         }
         foreach (['difficulty', 'kind'] as $f) {
             if (! empty($data[$f])) {

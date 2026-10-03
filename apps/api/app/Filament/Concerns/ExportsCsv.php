@@ -9,9 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 /** CSV export of whatever the table currently shows (search, filters and sort applied). Available on every list page. */
 trait ExportsCsv
 {
+    /** Lists holding customer details narrow this: exporting emails in bulk is more than viewing them. */
+    protected function canExportCsv(): bool
+    {
+        $resource = static::getResource();
+
+        return method_exists($resource, 'canExport') ? $resource::canExport() : true;
+    }
+
     protected function exportCsvAction(): Action
     {
-        return Action::make('exportCsv')->label('Export CSV')->action(function () {
+        return Action::make('exportCsv')->label('Export CSV')->visible(fn () => $this->canExportCsv())->action(function () {
+            abort_unless($this->canExportCsv(), 403);
+
             $table = $this->getTable();
             $columns = collect($table->getColumns())->filter(fn ($c) => ! $c->isHidden())->values();
             $query = $this->getFilteredSortedTableQuery();
