@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/v1/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Announcements that apply to this plan, version, country and moment, localised. Public; a token only refines the plan */
+        get: operations["announcement.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/register": {
         parameters: {
             query?: never;
@@ -129,6 +146,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["billing.webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["billing.checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/config": {
         parameters: {
             query?: never;
@@ -178,6 +227,23 @@ export interface paths {
         patch: operations["device.update"];
         trace?: never;
     };
+    "/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Feedback is text the user chose to write. Error reports carry only allowlisted codes, never content */
+        post: operations["feedback.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -203,6 +269,39 @@ export interface paths {
         };
         get: operations["me.entitlements"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["telemetry.ingest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/telemetry/preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Server-side opt-out: after this, events from the install are dropped and nothing new is stored */
+        put: operations["telemetry.preference"];
         post?: never;
         delete?: never;
         options?: never;
@@ -331,6 +430,36 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "announcement.index": {
+        parameters: {
+            query?: {
+                version?: string | null;
+                locale?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            key: string;
+                            title: string | "";
+                            body: string | "";
+                            dismissible: string;
+                        }[];
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "auth.register": {
         parameters: {
             query?: never;
@@ -577,6 +706,86 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
         };
     };
+    "billing.webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        result: "duplicate" | "applied" | "ignored";
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "invalid_signature";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "billing.checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    plan: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "checkout_failed";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
     "config.show": {
         parameters: {
             query?: never;
@@ -696,6 +905,47 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "feedback.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    type: "feedback" | "error_report";
+                    message?: string | null;
+                    /** Format: email */
+                    email?: string | null;
+                    /** Format: uuid */
+                    install_id?: string | null;
+                    context?: {
+                        error_code?: string | null;
+                        provider?: string | null;
+                        model?: string | null;
+                        /** @enum {string|null} */
+                        kind?: "image" | "video" | "upscale" | "voice" | "text" | null;
+                    };
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "me.show": {
         parameters: {
             query?: never;
@@ -740,10 +990,74 @@ export interface operations {
                         plan: string;
                         limits: string;
                         bonus_runs: string;
+                        subscription: {
+                            status: string;
+                            renews_or_ends: string | null;
+                        } | null;
                     };
                 };
             };
             401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "telemetry.ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    install_id: string;
+                    events: string[];
+                };
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stored: number;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "telemetry.preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    install_id: string;
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
         };
     };
     "template.index": {

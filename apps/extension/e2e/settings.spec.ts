@@ -74,7 +74,6 @@ test('a project exports without any key, imports back after everything is delete
   // Intercept the download the Export button triggers.
   const downloadUrl = page.evaluate(() => new Promise<string>((resolve) => {
     const orig = chrome.downloads.download.bind(chrome.downloads);
-    // @ts-expect-error test hook: capture the blob URL instead of opening a save dialog
     chrome.downloads.download = async (o: { url: string }) => { resolve(o.url); return 1; };
     void orig;
   }));

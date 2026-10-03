@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { applyDensity, applyTheme, getDensity, getTheme, type Density, type Theme } from '../prefs';
+import { db } from '../db/db';
 import { deleteAllLocalData, exportProject, importProject, listProjects } from '../projects';
 
 export const SHORTCUTS: Array<[string, string]> = [
@@ -29,6 +30,8 @@ export function SettingsExtras({ onShortcuts }: { onShortcuts: () => void }) {
   const [withAssets, setWithAssets] = useState(false);
   const [msg, setMsg] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [awake, setAwake] = useState(false);
+  useEffect(() => { void db.kv.get('keepAwake').then((r) => setAwake(!!r?.value)); }, []);
   useEffect(() => { void listProjects().then((p) => { setProjects(p); setProject(p[0] ?? ''); }); }, []);
 
   return (
@@ -38,6 +41,17 @@ export function SettingsExtras({ onShortcuts }: { onShortcuts: () => void }) {
         <label className="grid gap-1">Theme<select value={theme} onChange={(e) => { setTheme(e.target.value as Theme); applyTheme(e.target.value as Theme); }} className={field}><option value="system">Match system</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
         <label className="grid gap-1">Density<select value={density} onChange={(e) => { setDensity(e.target.value as Density); applyDensity(e.target.value as Density); }} className={field}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
       </div>
+      <label className="mt-3 flex items-start gap-2">
+        <input type="checkbox" checked={awake} onChange={async (e) => {
+          const on = e.target.checked;
+          // The browser asks for the permission only now, when you turn this on.
+          if (on && !(await chrome.permissions.request({ permissions: ['power'] }))) { setMsg('Permission to keep the computer awake was not granted.'); return; }
+          if (!on) await chrome.permissions.remove({ permissions: ['power'] }).catch(() => undefined);
+          await db.kv.put({ key: 'keepAwake', value: on });
+          setAwake(on);
+        }} />
+        <span>Keep this computer awake while a run is active. Runs only continue while Chrome is open and the computer is awake.</span>
+      </label>
       <button className="mt-2 w-fit underline" onClick={onShortcuts}>Keyboard shortcuts</button>
 
       <h2 className="mt-6 text-[15px] font-semibold">Projects</h2>

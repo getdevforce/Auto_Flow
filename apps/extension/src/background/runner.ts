@@ -51,9 +51,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Drives every active run. A Web Lock keeps one loop alive at a time. The loop is only an optimisation:
  * state is in IndexedDB and the alarm below re-enters it if the worker was evicted.
  */
+/** Optional 'power' permission: keeps the computer awake only while a run is active, and only if the user turned it on. */
+async function keepAwake(on: boolean): Promise<void> {
+  try {
+    if (!(await db.kv.get('keepAwake'))?.value) return;
+    const power = (chrome as unknown as { power?: { requestKeepAwake(l: string): void; releaseKeepAwake(): void } }).power;
+    if (on) power?.requestKeepAwake('system'); else power?.releaseKeepAwake();
+  } catch { /* permission missing or unsupported: runs still work, the computer may sleep */ }
+}
+
 export async function runLoop(): Promise<void> {
   await navigator.locks.request('frameloom-run-loop', { ifAvailable: true }, async (lock) => {
     if (!lock) return;
+    await keepAwake(true);
     const engines = new Map<string, QueueEngine>();
     const recovered = new Set<string>();
     const open = (j: { state: string }) => j.state === 'queued' || j.state === 'running' || j.state === 'polling';
@@ -108,6 +118,7 @@ export async function runLoop(): Promise<void> {
       await sleep(wake === null ? 250 : Math.min(Math.max(wake - Date.now(), 250), 2000));
     }
   });
+  await keepAwake(false);
   await flushTelemetry();
   await scheduleSafetyAlarm();
 }
