@@ -9,3 +9,6 @@ apps/api/vendor
 apps/api/storage/*.key
 apps/api/database/*.sqlite
 .DS_Store
+test-results
+playwright-report
+.playwright-artifacts-*
