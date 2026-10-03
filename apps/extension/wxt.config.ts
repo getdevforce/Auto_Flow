@@ -4,6 +4,13 @@ import { readFileSync } from 'node:fs';
 const brand = JSON.parse(readFileSync(new URL('../../brand.config.json', import.meta.url), 'utf8'));
 
 export default defineConfig({
+  hooks: {
+    // The ffmpeg core must ship inside the extension: MV3 forbids loading code from a remote host.
+    'build:publicAssets': (_wxt, files) => {
+      const dir = new URL('./node_modules/@ffmpeg/core/dist/umd/', import.meta.url).pathname;
+      files.push({ absoluteSrc: `${dir}ffmpeg-core.js`, relativeDest: 'ffmpeg/ffmpeg-core.js' }, { absoluteSrc: `${dir}ffmpeg-core.wasm`, relativeDest: 'ffmpeg/ffmpeg-core.wasm' });
+    },
+  },
   modules: ['@wxt-dev/module-react'],
   manifest: {
     name: brand.productName,

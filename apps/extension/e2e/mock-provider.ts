@@ -41,7 +41,7 @@ let falSeq = 0;
 const BASE = 'http://127.0.0.1:9101';
 
 /** Minimal fal.ai-style queue: submit, status, result and a file endpoint serving an MP4 stub of the right size. */
-function fal(req: http.IncomingMessage, res: http.ServerResponse, raw: string, counts: Map<string, number>, json: (s: number, b: unknown, h?: Record<string, string>) => void) {
+function fal(realMp4: Buffer | undefined, req: http.IncomingMessage, res: http.ServerResponse, raw: string, counts: Map<string, number>, json: (s: number, b: unknown, h?: Record<string, string>) => void) {
   const url = req.url as string;
   // Result files are served from a CDN without the API key, as the real service does.
   const isFile = /^\/fal\/_file\//.test(url);
@@ -59,6 +59,7 @@ function fal(req: http.IncomingMessage, res: http.ServerResponse, raw: string, c
   if (result) return json(200, { video: { url: `${BASE}/fal/_file/${result[1]}.mp4` } });
   if (file) {
     const j = falJobs.get(file[1] as string)!;
+    if (realMp4 && j.model.includes('real')) return void res.writeHead(200, { 'content-type': 'video/mp4' }).end(realMp4);
     const bad = j.model.includes('up-bad');
     const dims = j.model.includes('up') ? (bad ? [960, 540] : [1280, 720]) : j.model.includes('draft') ? [640, 360] : [1280, 720];
     res.writeHead(200, { 'content-type': 'video/mp4' }).end(Buffer.from(buildMp4Stub(dims[0]!, dims[1]!, 5)));
@@ -80,7 +81,7 @@ function fal(req: http.IncomingMessage, res: http.ServerResponse, raw: string, c
   res.writeHead(404).end();
 }
 
-export function startMockProvider(port = 9101): Promise<MockProvider> {
+export function startMockProvider(port = 9101, opts: { realMp4?: Buffer } = {}): Promise<MockProvider> {
   const requests: MockProvider['requests'] = [];
   const counts = new Map<string, number>();
   const server = http.createServer((req, res) => {
@@ -93,7 +94,7 @@ export function startMockProvider(port = 9101): Promise<MockProvider> {
       requests.push({ url: req.url ?? '', auth: req.headers.authorization, body: raw });
       const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
         res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(JSON.stringify(body));
-      if (req.url?.startsWith('/fal/')) return fal(req, res, raw, counts, json);
+      if (req.url?.startsWith('/fal/')) return fal(opts.realMp4, req, res, raw, counts, json);
       if (req.url === '/v1/models') {
         return req.headers.authorization === 'Bearer good-key' ? json(200, { data: [] }) : json(401, { error: { message: 'bad key' } });
       }

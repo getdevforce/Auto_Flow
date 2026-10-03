@@ -149,6 +149,14 @@ describe('QueueEngine', () => {
     expect((await state(h.store, 'j3')).state).toBe('queued');
   });
 
+  it('reserves the estimate of jobs still in flight so parallel starts cannot overshoot the cap', async () => {
+    const h = setup({ cap: 0.25, concurrency: 5, exec: { start: async () => ({ done: false, providerJobId: 'p' }) } });
+    for (const id of ['j1', 'j2', 'j3', 'j4']) await h.store.put(mkJob(id));
+    const r = await h.engine.tick();
+    expect(r.started).toBe(2); // 3 x 0.10 would pass the 0.25 cap
+    expect(h.engine.paused).toBe(true);
+  });
+
   it('fails polled jobs the provider reports as failed, marking policy rejections', async () => {
     const h = setup({ exec: { start: async () => ({ done: false, providerJobId: 'x' }), poll: async () => ({ state: 'failed', message: 'blocked', policy: true }) } });
     await h.store.put(mkJob('j1'));

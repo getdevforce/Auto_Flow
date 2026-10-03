@@ -12,8 +12,13 @@ const configStore: ConfigStore = {
   get: async () => (await db.kv.get('config'))?.value as never,
   set: async (c) => { await db.kv.put({ key: 'config', value: c }); },
 };
-export const fetchConfig = (baseUrl = API_BASE) =>
-  loadRemoteConfig({ baseUrl, fetch: (u, i) => fetch(u, i), store: configStore });
+/** Server URL: a runtime setting (self-hosting, dev) falling back to the build-time default. */
+export async function getApiBase(): Promise<string> {
+  return ((await db.kv.get('apiBase'))?.value as string | undefined) || API_BASE;
+}
+
+export const fetchConfig = async (baseUrl?: string) =>
+  loadRemoteConfig({ baseUrl: baseUrl ?? (await getApiBase()), fetch: (u, i) => fetch(u, i), store: configStore });
 
 export interface Session { token: string; email: string; plan: string; installId: string }
 
@@ -26,7 +31,8 @@ export async function getInstallId(): Promise<string> {
 }
 export const getSession = async () => (await db.kv.get('session'))?.value as Session | undefined;
 
-export async function login(email: string, password: string, baseUrl = API_BASE): Promise<Session> {
+export async function login(email: string, password: string, baseUrl?: string): Promise<Session> {
+  baseUrl ??= await getApiBase();
   const installId = await getInstallId();
   const api = createApiClient(baseUrl);
   const { data, error } = await api.POST('/v1/auth/login', {

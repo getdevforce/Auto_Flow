@@ -39,6 +39,7 @@ export function AutopilotPanel() {
   const [mode, setMode] = useState<RunSettings['mode']>('draft_upscale');
   const [videoModel, setVideoModel] = useState('');
   const [upscaleModel, setUpscaleModel] = useState('');
+  const [upscaleProvider, setUpscaleProvider] = useState('fal');
   const [strict, setStrict] = useState(false);
   const [strength, setStrength] = useState<RunSettings['refineStrength']>('standard');
   const [score, setScore] = useState(false);
@@ -54,7 +55,7 @@ export function AutopilotPanel() {
         <form className="grid gap-2" onSubmit={async (e) => {
           e.preventDefault();
           try { setErr(''); await startAutopilot({ project, script, autonomy, textProvider: provider, textModel, imageProvider, imageModel, budgetUsd: Number(budget) || 0,
-            settings: { mode, videoModel, upscaleModel, strictOrder: strict, refineStrength: strength, score, priceVideoPerSec: Number(pVid) || 0, priceUpscale: Number(pUp) || 0, directorModel: textModel } }); }
+            settings: { mode, videoModel, upscaleModel: upscaleProvider === 'local' ? 'lanczos' : upscaleModel, upscaleProvider, strictOrder: strict, refineStrength: strength, score, priceVideoPerSec: Number(pVid) || 0, priceUpscale: Number(pUp) || 0, directorModel: textModel } }); }
           catch (x) { setErr((x as Error).message); }
         }}>
           <label className="grid gap-1">Script or idea<textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} required className="rounded-md border border-line bg-surface px-2 py-1" /></label>
@@ -87,7 +88,10 @@ export function AutopilotPanel() {
               <select aria-label="Prompt refinement" value={strength} onChange={(e) => setStrength(e.target.value as RunSettings['refineStrength'])} className="rounded-md border border-line bg-surface px-2 py-1"><option value="off">Off</option><option value="light">Light polish</option><option value="standard">Standard</option><option value="full">Full rewrite</option></select>
             </label>
             <label className="grid gap-1">Video model (fal.ai)<input value={videoModel} onChange={(e) => setVideoModel(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
-            <label className="grid gap-1">Upscale model<input value={upscaleModel} onChange={(e) => setUpscaleModel(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
+            <label className="grid gap-1">Upscaler
+              <select aria-label="Upscaler" value={upscaleProvider} onChange={(e) => setUpscaleProvider(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1"><option value="fal">fal.ai upscale model</option><option value="local">Local resize (basic, not AI upscaling)</option></select>
+            </label>
+            {upscaleProvider === 'fal' && <label className="grid gap-1">Upscale model<input value={upscaleModel} onChange={(e) => setUpscaleModel(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>}
             <label className="grid gap-1">Video price per second (USD)<input value={pVid} onChange={(e) => setPVid(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
             <label className="grid gap-1">Upscale price per clip (USD)<input value={pUp} onChange={(e) => setPUp(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={strict} onChange={(e) => setStrict(e.target.checked)} />Strict download order</label>

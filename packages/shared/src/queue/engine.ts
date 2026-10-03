@@ -78,15 +78,21 @@ export class QueueEngine {
       const fresh = await this.o.store.all();
       const running = (p: string) => fresh.filter((j) => j.provider === p && (j.state === 'running' || j.state === 'polling')).length;
       const slots = new Map<string, number>();
+      // Money already promised to jobs in flight (not yet recorded as spent) counts against the cap.
+      let reserved = fresh.filter((j) => j.state === 'running' || j.state === 'polling').reduce((t, j) => t + j.estimateUsd, 0);
       const due = fresh.filter((j) => j.state === 'queued' && j.nextAt <= now).sort((a, b) => a.seq - b.seq);
       for (const job of due) {
         if (this.paused) break;
         const free = slots.get(job.provider) ?? this.pacer(job.provider).slots - running(job.provider);
         if (free <= 0) { slots.set(job.provider, free); continue; }
-        if (this.o.budget.wouldExceed(job.estimateUsd)) { this.pause('budget', `Budget cap of $${this.o.budget.capUsd.toFixed(2)} reached`); break; }
+        if (this.o.budget.wouldExceed(job.estimateUsd + reserved)) { this.pause('budget', `Budget cap of $${this.o.budget.capUsd.toFixed(2)} reached`); break; }
         slots.set(job.provider, free - 1);
+        reserved += job.estimateUsd;
         started++;
         await this.startOne(job);
+        // Jobs that finished (or bounced back to the queue) inside startOne no longer hold a reservation.
+        const after = (await this.o.store.all()).find((j) => j.id === job.id);
+        if (after && after.state !== 'running' && after.state !== 'polling') reserved -= job.estimateUsd;
       }
     }
 

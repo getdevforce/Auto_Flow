@@ -142,7 +142,7 @@ async function scoreKeyframe(run: RunRow, shot: ShotRow, assetId: string): Promi
 async function startUpscale(run: RunRow, shot: ShotRow): Promise<void> {
   const s = run.settings!;
   const n = shot.upAttempt + 1;
-  const input: UpscaleJobInput = { providerId: s.upscaleProvider as ProviderId, model: s.upscaleModel, assetId: shot.draftAssetId!, factor: Math.max(1, Math.round(s.targetHeight / Number(s.draftRes.replace(/\D/g, '') || 360))), label: `shot ${shot.seq}` };
+  const input: UpscaleJobInput = { providerId: s.upscaleProvider as ProviderId | 'local', model: s.upscaleModel, targetWidth: s.targetWidth, targetHeight: s.targetHeight, assetId: shot.draftAssetId!, factor: Math.max(1, Math.round(s.targetHeight / Number(s.draftRes.replace(/\D/g, '') || 360))), label: `shot ${shot.seq}` };
   await ensureJob(run, `${run.id}:up:${shot.seq}:${n}`, 'upscale', s.upscaleProvider, s.upscaleModel, shot.seq, s.priceUpscale, input);
   await db.shots.update(shot.id, { upAttempt: n, status: 'upscaling' });
 }

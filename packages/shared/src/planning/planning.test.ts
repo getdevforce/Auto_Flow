@@ -112,3 +112,20 @@ describe('manifest and ordering', () => {
     expect(r).toEqual({ succeeded: 2, flagged: [{ seq: 2, reason: 'x' }, { seq: 4, reason: 'draft kept' }], skipped: 1, retries: 4, costUsd: 0.1, durationMs: 1000 });
   });
 });
+
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const ffmpegOk = (() => { try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
+describe.skipIf(!ffmpegOk)('mp4 probe against a real encoder', () => {
+  it('reads size and duration from an ffmpeg-made clip', () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'probe-')), 'a.mp4');
+    execFileSync('ffmpeg', ['-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=10', '-t', '2', '-pix_fmt', 'yuv420p', '-y', f], { stdio: 'ignore' });
+    const info = probeMp4(new Uint8Array(readFileSync(f)))!;
+    expect(info.width).toBe(320);
+    expect(info.height).toBe(180);
+    expect(info.durationSec).toBeCloseTo(2, 0);
+  });
+});

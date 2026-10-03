@@ -41,7 +41,8 @@ test('checkpoints mode: analyses, pauses at the characters gate and the location
   await expect(ap.getByTestId('locks')).toContainText('@v1');
   await ap.getByRole('button', { name: 'Approve and lock' }).click();
 
-  await expect(ap.getByTestId('ap-state')).toHaveText('generating / shot_planning', { timeout: 30_000 });
+  // After the environment locks the director plans shots, builds keyframes for the pilot scene and stops at the third gate.
+  await expect(ap.getByTestId('ap-state')).toHaveText('awaiting_approval / pilot_scene', { timeout: 60_000 });
   await expect(ap.getByTestId('locks')).toContainText('loc_');
   expect(await page.evaluate(async () => {
     const open = indexedDB.open('frameloom');
@@ -57,7 +58,8 @@ test('full auto never pauses and logs its decisions', async () => {
   const page = await openSidePanel(ctx, id);
   await setup(page);
   const ap = await start(page, 'full_auto');
-  await expect(ap.getByTestId('ap-state')).toHaveText('generating / shot_planning', { timeout: 40_000 });
+  await expect(ap.getByLabel('Decision log')).toContainText('Planned 6 shot(s)', { timeout: 60_000 });
+  await expect(ap.getByTestId('ap-state')).not.toHaveText(/awaiting_approval/);
   await expect(ap.getByLabel('Decision log')).toContainText('Auto-approved a portrait for Ada Voss');
   await expect(ap.getByLabel('Decision log')).toContainText('Auto-approved the wide plate for Dock');
   await ctx.close();
