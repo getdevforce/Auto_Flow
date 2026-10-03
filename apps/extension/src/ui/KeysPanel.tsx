@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { PROVIDER_IDS, type ProviderId } from '@frameloom/shared';
 import { PROVIDER_LABELS, saveKey, testConnection } from '../keys';
 import { vault } from '../services';
+import { safeBase } from '../api-base';
 
 type Phase = 'loading' | 'setup' | 'locked' | 'ready';
 
@@ -29,9 +30,9 @@ export function KeysPanel() {
       <section className="mt-4 grid gap-2" aria-labelledby="vault-setup">
         <h2 id="vault-setup" className="font-semibold">Protect your keys</h2>
         <p className="text-muted">
-          Keys are encrypted on this computer and sent only to the provider you choose. Without a passphrase, the encryption key is stored in
-          this browser profile: it stops someone reading a copied profile folder, but not malware running as you. A passphrase is stronger,
-          and you re-enter it each browser session.
+          Keys are encrypted on this computer and sent only to the provider you choose. Without a passphrase, the encryption key is kept in
+          this browser profile next to the encrypted keys, so anyone who can read the profile or run code as you can recover them. With a passphrase
+          (at least 10 characters) nothing on disk can decrypt them; you enter it once per browser session.
         </p>
         <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); const p = String(new FormData(e.currentTarget).get('pass') || ''); void run(() => vault.init(p ? 'passphrase' : 'device', p || undefined))(); }}>
           <label className="grid gap-1">Passphrase (optional)<input name="pass" type="password" className="rounded-md border border-line bg-surface px-2 py-1" /></label>
@@ -56,7 +57,14 @@ export function KeysPanel() {
     <section className="mt-4 grid gap-3" aria-label="Provider keys">
       {PROVIDER_IDS.map((id) => (
         <KeyRow key={id} id={id} has={saved.includes(id)} status={msg[id]}
-          onSave={(k) => run(async () => { await saveKey(id, k); setMsg((m) => ({ ...m, [id]: { ok: true, text: 'Saved. Test the connection to check it.' } })); })()}
+          onSave={(k) => run(async () => {
+            if (k.baseUrl && !safeBase(k.baseUrl)) throw new Error('Use an https address for the endpoint (plain http is only allowed for localhost).');
+            // Endpoints outside the built-in provider hosts need the browser's one-time permission prompt.
+            if (k.baseUrl) {
+              const origin = `${new URL(k.baseUrl).origin}/*`;
+              if (!(await chrome.permissions.contains({ origins: [origin] })) && !(await chrome.permissions.request({ origins: [origin] }))) throw new Error('Permission to reach that address was not granted, so the key was not saved.');
+            }
+            await saveKey(id, k); setMsg((m) => ({ ...m, [id]: { ok: true, text: 'Saved. Test the connection to check it.' } })); })()}
           onTest={async () => {
             try { await testConnection(id); setMsg((m) => ({ ...m, [id]: { ok: true, text: 'Connection works.' } })); }
             catch (e) { setMsg((m) => ({ ...m, [id]: { ok: false, text: (e as Error).message } })); }

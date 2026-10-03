@@ -1,6 +1,12 @@
 import { defineConfig } from 'wxt';
 import { readFileSync } from 'node:fs';
 
+// A production build must say where the backend is, over https. Local dev and the e2e build are exempt.
+const isProdBuild = ['build', 'zip'].some((c) => process.argv.includes(c));
+if (isProdBuild && !process.env.WXT_E2E && !process.env.WXT_ALLOW_LOCAL_API && !/^https:\/\//.test(process.env.WXT_API_BASE ?? '')) {
+  throw new Error('Set WXT_API_BASE to your https backend URL before a production build (or WXT_ALLOW_LOCAL_API=1 for a local test build).');
+}
+
 const brand = JSON.parse(readFileSync(new URL('../../brand.config.json', import.meta.url), 'utf8'));
 
 export default defineConfig({

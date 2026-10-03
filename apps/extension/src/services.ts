@@ -1,12 +1,23 @@
 import { createApiClient } from '@frameloom/api-client';
+import { safeBase } from './api-base';
 import { loadRemoteConfig, type ConfigStore } from '@frameloom/shared';
 import { db, DexieVaultStorage } from './db/db';
 import { KeyVault } from './vault/vault';
 
 // Overridable at build time (WXT exposes import.meta.env.WXT_*); local dev default matches `php artisan serve`.
+// Set WXT_API_BASE when building for production (the build refuses to run without it). Dev falls back to the local server.
 export const API_BASE: string = (import.meta.env?.WXT_API_BASE as string | undefined) ?? 'http://127.0.0.1:8000';
 
-export const vault = new KeyVault(new DexieVaultStorage());
+/** chrome.storage.session is memory-only and limited to extension contexts by default; absent in unit tests. */
+// The typings only describe the callback form of get(); the promise form is what Chrome ships.
+const st = () => chrome.storage?.session as unknown as { get(k: string): Promise<Record<string, string>>; set(o: Record<string, string>): Promise<void>; remove(k: string): Promise<void> } | undefined;
+const sessionKey = {
+  async get() { return ((await st()?.get('vaultKey')) as { vaultKey?: string } | undefined)?.vaultKey; },
+  async set(v: string) { await st()?.set({ vaultKey: v }); },
+  async clear() { await st()?.remove('vaultKey'); },
+};
+
+export const vault = new KeyVault(new DexieVaultStorage(), undefined, sessionKey);
 
 const configStore: ConfigStore = {
   get: async () => (await db.kv.get('config'))?.value as never,
@@ -14,8 +25,11 @@ const configStore: ConfigStore = {
 };
 /** Server URL: a runtime setting (self-hosting, dev) falling back to the build-time default. */
 export async function getApiBase(): Promise<string> {
-  return ((await db.kv.get('apiBase'))?.value as string | undefined) || API_BASE;
+  const override = (await db.kv.get('apiBase'))?.value as string | undefined;
+  return safeBase(override) ?? safeBase(API_BASE) ?? 'https://invalid.invalid';
 }
+
+
 
 export const fetchConfig = async (baseUrl?: string) =>
   loadRemoteConfig({ baseUrl: baseUrl ?? (await getApiBase()), fetch: (u, i) => fetch(u, i), store: configStore });

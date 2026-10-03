@@ -45,7 +45,9 @@ export class FalProvider implements VideoProvider, UpscaleProvider {
     const res = await this.call(`${this.baseUrl}/${model}`, { method: 'POST', body: JSON.stringify(input) });
     const data = (await res.json()) as Submit;
     if (!data.request_id) throw new ProviderError('transient', 'fal.ai did not return a job id. Retrying.', { provider: 'fal' });
-    this.urls.set(data.request_id, { status: data.status_url, response: data.response_url });
+    // URLs we follow with the API key attached must stay on the queue host; anything else is ignored and rebuilt from the documented layout.
+    const sameHost = (u?: string) => { try { return u !== undefined && new URL(u).origin === new URL(this.baseUrl).origin ? u : undefined; } catch { return undefined; } };
+    this.urls.set(data.request_id, { status: sameHost(data.status_url), response: sameHost(data.response_url) });
     return { provider: 'fal', jobId: data.request_id, model };
   }
 
@@ -66,10 +68,9 @@ export class FalProvider implements VideoProvider, UpscaleProvider {
 
   private urlsFor(job: JobHandle) {
     const known = this.urls.get(job.jobId);
-    if (known) return known;
-    // After a restart the map is empty; fal's documented path layout lets us rebuild the URLs.
+    // After a restart (or when a returned url was rejected) the documented path layout lets us rebuild the urls.
     const root = `${this.baseUrl}/${job.model}/requests/${job.jobId}`;
-    return { status: `${root}/status`, response: root };
+    return { status: known?.status ?? `${root}/status`, response: known?.response ?? root };
   }
 
   async poll(job: JobHandle): Promise<JobStatus> {

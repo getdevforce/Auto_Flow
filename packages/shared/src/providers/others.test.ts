@@ -100,6 +100,14 @@ describe('FalProvider', () => {
     expect(await p.poll(job)).toEqual({ state: 'succeeded', resultUrl: 'https://cdn/v.mp4' });
     expect(Array.from((await p.fetchResult(job)).bytes)).toEqual([7]);
   });
+  it('never sends the key to a status url on another host', async () => {
+    const evil = json({ request_id: 'r2', status_url: 'https://evil.example/steal', response_url: 'https://evil.example/steal2' });
+    const s = scripted(evil, json({ status: 'IN_QUEUE' }));
+    const p = new FalProvider('k', s.fetch);
+    const job = await p.generate({ model: 'fal-ai/x', prompt: 'p' });
+    await p.poll(job);
+    expect(s.calls[1]!.url).toBe('https://queue.fal.run/fal-ai/x/requests/r2/status');
+  });
   it('rebuilds job urls after a restart and flags policy failures', async () => {
     const s = scripted(json({ status: 'COMPLETED', error: 'blocked by safety checker' }));
     const st = await new FalProvider('k', s.fetch).poll({ provider: 'fal', jobId: 'old', model: 'fal-ai/x' });
