@@ -106,7 +106,7 @@ export class QueueEngine {
   }
 
   private async startOne(job: Job): Promise<void> {
-    const running: Job = { ...job, state: 'running', attempts: job.attempts + 1 };
+    const running: Job = { ...job, state: 'running', attempts: job.attempts + 1, startedAt: job.startedAt ?? this.now() };
     await this.o.store.put(running);
     try {
       const out = await this.o.executor.start(running);

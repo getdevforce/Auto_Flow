@@ -7,6 +7,7 @@ import { TemplatesPanel } from '../../src/ui/TemplatesPanel';
 import { CinemaPanel } from '../../src/ui/CinemaPanel';
 import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
+import { isTelemetryEnabled, setTelemetryEnabled, track, flushTelemetry } from '../../src/telemetry';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
 const TABS = ['Autopilot', 'Create', 'Bible', 'Library', 'Prompts', 'Cinema', 'Settings'] as const;
@@ -21,9 +22,13 @@ export function App() {
   const [session, setSession] = useState<Session | undefined>();
   const [cfg, setCfg] = useState<string>('Loading configuration');
   const [err, setErr] = useState('');
+  const [share, setShare] = useState(true);
 
   useEffect(() => {
     getSession().then(setSession);
+    isTelemetryEnabled().then(setShare);
+    track('app_opened');
+    void flushTelemetry();
     fetchConfig().then((r) => setCfg(`Config v${r.config.version} (${r.source})`));
   }, []);
   useEffect(() => { try { localStorage.setItem('tab', tab); } catch { /* storage can be unavailable; the tab simply is not remembered */ } }, [tab]);
@@ -81,6 +86,11 @@ export function App() {
                 <button className="rounded-md bg-accent px-3 py-1.5 text-accent-ink">Sign in</button>
               </form>
             )}
+            <h2 className="mt-6 text-[15px] font-semibold">Usage counts</h2>
+            <label className="mt-2 flex items-start gap-2">
+              <input type="checkbox" checked={share} onChange={(e) => { setShare(e.target.checked); void setTelemetryEnabled(e.target.checked); }} />
+              <span>Share anonymous usage counts. Event names and totals only: which provider and model, success or failure, run sizes. Never scripts, prompts, filenames, images or keys.</span>
+            </label>
             <h2 className="mt-6 text-[15px] font-semibold">Provider keys</h2>
             <KeysPanel />
           </>

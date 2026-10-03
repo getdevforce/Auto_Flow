@@ -4,6 +4,7 @@ import { extractVariables, fillTemplate, missingVariables } from '@frameloom/sha
 import { db } from '../db/db';
 import { useDraft } from '../draft';
 import { getApiBase, getSession } from '../services';
+import { track } from '../telemetry';
 
 interface Card { slug: string; title: string; summary?: string; category?: string; tags: string[]; difficulty: string; featured: boolean; trending: boolean; use_count: number; rating: number | null }
 interface Detail extends Card { body: { prompt?: string; defaults?: Record<string, string> } }
@@ -48,6 +49,7 @@ export function TemplatesPanel() {
 
   async function useTemplate() {
     setDraft(fillTemplate(promptText, values));
+    track('template_used', { item: open!.slug });
     // Counts the use. Sends only the template's slug, never the filled text.
     void fetch(`${await getApiBase()}/api/v1/templates/${open!.slug}/use`, { method: 'POST' }).catch(() => undefined);
   }

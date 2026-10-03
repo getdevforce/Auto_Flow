@@ -8,6 +8,7 @@ import { db, type RunRow, type RunSettings, type ShotRow } from '../db/db';
 import { blobUrlFor } from '../background/offscreen';
 import type { ImageJobInput, UpscaleJobInput, VideoJobInput } from '../background/executor';
 import { directorRefine, textProvider } from './director';
+import { track } from '../telemetry';
 
 const PIPELINE_CAPS = { maxReferenceImages: 4, ratios: [] as string[], durationsSec: [] as number[], resolutions: [] as string[], firstLastFrame: false, identityTraining: false, lipSync: false, upscaleFactors: [] as number[] };
 
@@ -114,6 +115,7 @@ async function fail(run: RunRow, shot: ShotRow, stage: 'keyframe' | 'video' | 'u
     const suggestion = kind === 'policy_rejected' ? await suggestRewrite(run, fresh, decision.reason) : undefined;
     const reason = kind === 'transient' || kind === 'rate_limited' ? `Kept failing after ${fresh.retries} retries: ${decision.reason.replace(/\s*Retrying\.?$/, '')}` : decision.reason;
     await db.shots.update(shot.id, { status: 'flagged', flagReason: reason, suggestedRewrite: suggestion });
+    track('shot_flagged', { reason: kind === 'policy_rejected' || kind === 'auth' || kind === 'quota' || kind === 'rate_limited' || kind === 'transient' || kind === 'invalid_request' ? kind : 'unknown' });
     await log(run.id, `Shot ${shot.seq} flagged: ${reason}`);
   }
   return true;
@@ -337,6 +339,7 @@ export async function driveProduction(runId: string): Promise<boolean> {
     const pilot = after.filter((x) => x.plan.sceneIndex === firstScene);
     if (gated && pilot.every((x) => ['kf_locked', 'flagged', 'skipped'].includes(x.status))) {
       await send(runId, 'GATE_REQUIRED', 'gate-pilot');
+      track('gate_shown', { gate: 'pilot_scene', autonomy: fresh.autonomy });
       await db.runs.update(runId, { stage: 'pilot_scene' });
       return true;
     }
@@ -364,6 +367,7 @@ export async function driveProduction(runId: string): Promise<boolean> {
       await db.runs.update(runId, { report: buildReport(m, retries, Date.now() - (fresh.startedAt ?? Date.now())), stage: 'finished' });
       await writeManifest((await db.runs.get(runId))!);
       await send(runId, 'FINISHED', 'finished');
+      track('autopilot_completed', { autonomy: fresh.autonomy, shots: after.length, flagged: after.filter((x) => x.status === 'flagged' || (x.status === 'done' && x.flagReason)).length });
       await log(runId, 'Run complete.');
       return true;
     }
@@ -392,6 +396,7 @@ export async function regenerateShot(runId: string, seq: number, opts: { prompt?
 
 export async function approvePilot(runId: string) {
   await db.runs.update(runId, { approvals: { ...(await db.runs.get(runId))!.approvals, pilot: true } });
+  track('gate_approved', { gate: 'pilot_scene' });
   const run = (await db.runs.get(runId))!;
   const machine = reduce(run.machine!, { id: `${runId}:approved-pilot`, type: 'APPROVED' });
   await db.runs.update(runId, { machine, state: machine.state });

@@ -25,6 +25,8 @@ export interface Job {
   result?: unknown;
   /** Set when the job ended in a state a human should look at (policy rejection, retries exhausted). */
   flagged?: boolean;
+  /** Epoch ms when the job first started running; used for duration metrics. */
+  startedAt?: number;
 }
 
 export interface JobStore {

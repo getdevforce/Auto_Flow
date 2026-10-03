@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { FIXTURE_SCRIPT } from '../../../packages/shared/src/fixtures/script';
 import { launchExtension, openSidePanel, openTab } from './helpers';
@@ -17,6 +19,8 @@ function startRecorder(port = 9102) {
       res.setHeader('Access-Control-Allow-Methods', '*');
       res.setHeader('Access-Control-Expose-Headers', 'ETag');
       if (req.method === 'OPTIONS') return void res.writeHead(204).end();
+      if (req.url === '/api/v1/telemetry') return void res.writeHead(202, { 'content-type': 'application/json' }).end('{"stored":1}');
+      if (req.url === '/api/v1/telemetry/preference') return void res.writeHead(200, { 'content-type': 'application/json' }).end('{"enabled":true}');
       if (req.url === '/api/v1/config') return void res.writeHead(200, { 'content-type': 'application/json', ETag: '"r1"' }).end(JSON.stringify({ version: 1, schema: 1, minSupportedVersion: '0.0.1' }));
       res.writeHead(401, { 'content-type': 'application/json' }).end('{"error":{"code":"x","message":"no"}}');
     });
@@ -64,8 +68,42 @@ test('a full autopilot run never sends keys, script text or prompts to the backe
   for (const secret of ['good-key', 'harbour office', 'ada voss', 'rusted cranes', 'raincoat', 'tracking shot', 'portrait of']) {
     expect(all, `backend saw "${secret}"`).not.toContain(secret);
   }
-  expect([...new Set(recorder.seen.map((r) => r.url))].sort()).toEqual(['/api/v1/auth/login', '/api/v1/config']);
+  expect([...new Set(recorder.seen.map((r) => r.url))].sort()).toEqual(['/api/v1/auth/login', '/api/v1/config', '/api/v1/telemetry']);
+
+  // Every telemetry body is counts and metadata from the shared catalogue: no extra fields, no free text.
+  const catalogue = JSON.parse(fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../packages/shared/src/telemetry/catalogue.json'), 'utf8'));
+  // Events are flushed when the run loop winds down, so give the worker a moment after the UI shows completion.
+  await expect.poll(() => new Set(recorder.seen.filter((r) => r.url === '/api/v1/telemetry').flatMap((r) => JSON.parse(r.body).events.map((e: { name: string }) => e.name))).has('autopilot_completed'), { timeout: 15_000 }).toBe(true);
+  const batches = recorder.seen.filter((r) => r.url === '/api/v1/telemetry').map((r) => JSON.parse(r.body));
+  const names = new Set<string>();
+  for (const b of batches) {
+    expect(Object.keys(b).sort()).toEqual(['events', 'install_id']);
+    for (const e of b.events) {
+      names.add(e.name);
+      expect(catalogue.events).toContain(e.name);
+      expect(Object.keys(e).sort()).toEqual(['name', 'props', 'ts']);
+      for (const k of Object.keys(e.props)) expect(Object.keys(catalogue.props)).toContain(k);
+    }
+  }
+  expect([...names]).toEqual(expect.arrayContaining(['app_opened', 'autopilot_started', 'autopilot_completed', 'generation']));
   await ctx.close();
   await mock.close();
+  await recorder.close();
+});
+
+test('turning telemetry off stops all uploads and tells the server', async () => {
+  const recorder = await startRecorder(9103);
+  const { ctx, id } = await launchExtension();
+  const page = await openSidePanel(ctx, id);
+  await page.evaluate(() => new Promise<void>((r) => { const o = indexedDB.open('frameloom'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ key: 'apiBase', value: 'http://127.0.0.1:9103' }); t.oncomplete = () => r(); }; }));
+  await openTab(page, 'Settings');
+  await page.getByLabel(/Share anonymous usage counts/).uncheck();
+  await expect.poll(() => recorder.seen.filter((r) => r.url === '/api/v1/telemetry/preference').length).toBe(1);
+  expect(JSON.parse(recorder.seen.find((r) => r.url === '/api/v1/telemetry/preference')!.body).enabled).toBe(false);
+  const before = recorder.seen.filter((r) => r.url === '/api/v1/telemetry').length;
+  await page.reload();
+  await page.waitForTimeout(1500);
+  expect(recorder.seen.filter((r) => r.url === '/api/v1/telemetry').length).toBe(before);
+  await ctx.close();
   await recorder.close();
 });

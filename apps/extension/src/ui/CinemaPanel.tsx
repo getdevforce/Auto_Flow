@@ -5,6 +5,7 @@ import {
 } from '@frameloom/shared';
 import { directorRefine } from '../autopilot/director';
 import { runImageTool } from '../autopilot/tools';
+import { track } from '../telemetry';
 
 const SIZES = ['', 'extreme_close', 'close', 'medium_close', 'medium', 'wide', 'extreme_wide'];
 const field = 'rounded-md border border-line bg-surface px-2 py-1';
@@ -37,6 +38,7 @@ export function CinemaPanel() {
         cinema: effective, pinned: pinned.split('\n').map((s) => s.trim()).filter(Boolean), characters: [],
       });
       setResult(result);
+      track('refine_shown');
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -45,7 +47,7 @@ export function CinemaPanel() {
     <section className="mt-4 grid gap-3" aria-label="Cinema">
       <div className="grid grid-cols-2 gap-2">
         <label className="grid gap-1">Target<select value={target} onChange={(e) => setTarget(e.target.value as 'image' | 'video')} className={field}><option value="video">Video</option><option value="image">Image</option></select></label>
-        {target === 'video' && <label className="grid gap-1">Camera movement<select value={cameraId} onChange={(e) => setCameraId(e.target.value)} className={field}><option value="">None</option>{cameras.map((p: Preset) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+        {target === 'video' && <label className="grid gap-1">Camera movement<select value={cameraId} onChange={(e) => { setCameraId(e.target.value); if (e.target.value) track('preset_used', { item: e.target.value }); }} className={field}><option value="">None</option>{cameras.map((p: Preset) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
         <label className="grid gap-1">Shot size<select value={cinema.angle ?? ''} onChange={(e) => setCinema((c) => ({ ...c, angle: e.target.value }))} className={field}>{SIZES.map((s) => <option key={s} value={s}>{s ? s.replace('_', ' ') : 'Auto'}</option>)}</select></label>
         <label className="grid gap-1">Lens<input value={cinema.lens ?? ''} onChange={set('lens')} placeholder="35mm" className={field} /></label>
         <label className="grid gap-1">Depth of field<input value={cinema.depthOfField ?? ''} onChange={set('depthOfField')} placeholder="shallow depth of field" className={field} /></label>
@@ -75,7 +77,7 @@ export function CinemaPanel() {
           {result.negative && <p className="text-muted">Negative: {result.negative}</p>}
           {result.revertedToRaw && <p role="status" className="text-warn">The rewrite kept losing parts of your prompt, so your wording is used.</p>}
           {accepted === undefined
-            ? <div className="flex gap-2"><button className="rounded-md bg-accent px-3 py-1 text-accent-ink" onClick={() => setAccepted(result.refined)}>Accept</button><button className="rounded-md border border-line px-3 py-1" onClick={() => setAccepted(raw)}>Keep mine</button></div>
+            ? <div className="flex gap-2"><button className="rounded-md bg-accent px-3 py-1 text-accent-ink" onClick={() => { setAccepted(result.refined); track('refine_accepted'); }}>Accept</button><button className="rounded-md border border-line px-3 py-1" onClick={() => setAccepted(raw)}>Keep mine</button></div>
             : <label className="grid gap-1">Final prompt (edit freely)<textarea data-testid="final" value={accepted} onChange={(e) => setAccepted(e.target.value)} rows={4} className={field} /></label>}
         </div>
       )}

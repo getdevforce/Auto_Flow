@@ -2,6 +2,7 @@ import { BudgetGuard, CircuitBreaker, QueueEngine, renderName, type Job, type Jo
 import { db, type JobRow } from '../db/db';
 import { drive } from '../autopilot/pipeline';
 import { indexLibrary } from '../library/store';
+import { flushTelemetry, track } from '../telemetry';
 
 export type { ImageJobInput } from './executor';
 import type { ImageJobInput } from './executor';
@@ -82,7 +83,14 @@ export async function runLoop(): Promise<void> {
             pollIntervalMs: pollMs,
             store: new RunStore(run.id), executor, breaker: new CircuitBreaker(5), budget: new BudgetGuard(run.budgetUsd, spent),
             concurrency: { openai: 2, custom: 2, anthropic: 2, fal: 3 },
-            onEvent: (e) => { if (e.type === 'paused') void db.runs.update(run.id, { state: 'paused', pausedReason: e.detail }); },
+            onEvent: (e) => {
+              if (e.type === 'paused') void db.runs.update(run.id, { state: 'paused', pausedReason: e.detail });
+              if (e.type === 'job_done' || e.type === 'job_failed') {
+                const kind = e.job.kind;
+                track('generation', { provider: e.job.provider, model: e.job.model, kind, success: e.type === 'job_done', error_code: e.job.error?.kind, duration_ms: e.job.startedAt ? Math.min(Date.now() - e.job.startedAt, 3_600_000) : undefined });
+                if (e.type === 'job_done') void markFirstGeneration();
+              }
+            },
           });
           engines.set(run.id, engine);
         }
@@ -100,7 +108,14 @@ export async function runLoop(): Promise<void> {
       await sleep(wake === null ? 250 : Math.min(Math.max(wake - Date.now(), 250), 2000));
     }
   });
+  await flushTelemetry();
   await scheduleSafetyAlarm();
+}
+
+async function markFirstGeneration(): Promise<void> {
+  if ((await db.kv.get('firstGenerationSent'))?.value) return;
+  await db.kv.put({ key: 'firstGenerationSent', value: true });
+  track('first_generation');
 }
 
 /** Fallback wake-up in case this worker is evicted while work remains. */

@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('templates:publish-scheduled')->everyMinute();
+
+Schedule::command('telemetry:purge')->dailyAt('03:15');

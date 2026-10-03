@@ -1,5 +1,6 @@
 import { runLoop } from '../src/background/runner';
 import { extractFrame } from '../src/background/offscreen';
+import { flushTelemetry } from '../src/telemetry';
 
 export default defineBackground(() => {
   chrome.sidePanel?.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
@@ -7,7 +8,11 @@ export default defineBackground(() => {
   const wake = () => { void runLoop(); };
   chrome.runtime.onStartup.addListener(wake);
   chrome.runtime.onInstalled.addListener(wake);
-  chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'frameloom-tick') wake(); });
+  chrome.alarms.onAlarm.addListener((a) => {
+    if (a.name === 'frameloom-tick') wake();
+    if (a.name === 'frameloom-telemetry') void flushTelemetry();
+  });
+  void chrome.alarms.create('frameloom-telemetry', { periodInMinutes: 15 });
   chrome.runtime.onMessage.addListener((m, _sender, respond) => {
     if (m?.type === 'wake') wake();
     if (m?.type === 'sw-extract-frame') {

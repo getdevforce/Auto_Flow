@@ -7,6 +7,7 @@ import { db, type RunRow } from '../db/db';
 import { loadKey } from '../keys';
 import { vault } from '../services';
 import { CachingTextProvider } from './llm-cache';
+import { track } from '../telemetry';
 import { defaultSettings, driveProduction } from './shots';
 import type { RunSettings } from '../db/db';
 
@@ -42,6 +43,7 @@ export async function startAutopilot(s: AutopilotStart): Promise<string> {
     settings: defaultSettings({ directorModel: s.textModel, ...s.settings }),
   });
   await send(id, 'START', 'start');
+  track('autopilot_started', { autonomy: s.autonomy });
   await chrome.runtime.sendMessage({ type: 'wake' });
   return id;
 }
@@ -70,6 +72,7 @@ export async function approve(runId: string, gate: 'characters' | 'locations', p
   const approvals = { ...run.approvals, [gate]: picks };
   await db.runs.update(runId, { approvals });
   await send(runId, 'APPROVED', `approved-${gate}`);
+  track('gate_approved', { gate, autonomy: run.autonomy });
   await chrome.runtime.sendMessage({ type: 'wake' });
 }
 
@@ -122,7 +125,7 @@ export async function drive(runId: string): Promise<boolean> {
         imageJob(run, `cand:${ci}:${k}`, ci * 10 + k, { purpose: 'portrait', entity: c.name, prompt: portraitPrompt(c) }))));
       const jobs = await jobsFor(runId, 'cand:');
       if (!allDone(jobs)) return false;
-      if (needsApproval(run.autonomy ?? 'checkpoints', 'characters')) { await send(runId, 'GATE_REQUIRED', 'gate-characters'); return true; }
+      if (needsApproval(run.autonomy ?? 'checkpoints', 'characters')) { await send(runId, 'GATE_REQUIRED', 'gate-characters'); track('gate_shown', { gate: 'characters', autonomy: run.autonomy }); return true; }
       const picks: Record<string, string> = {};
       for (const c of analysis.characters) {
         const mine = jobs.filter((j) => (j.input as { entity: string }).entity === c.name && j.state === 'succeeded');
@@ -150,7 +153,7 @@ export async function drive(runId: string): Promise<boolean> {
         imageJob(run, `plate:${li}:${pi}`, 2000 + li * 10 + pi, { purpose: 'plate', entity: l.name, kind: p.kind, prompt: p.prompt }))));
       const jobs = await jobsFor(runId, 'plate:');
       if (!allDone(jobs)) return false;
-      if (needsApproval(run.autonomy ?? 'checkpoints', 'locations')) { await send(runId, 'GATE_REQUIRED', 'gate-locations'); return true; }
+      if (needsApproval(run.autonomy ?? 'checkpoints', 'locations')) { await send(runId, 'GATE_REQUIRED', 'gate-locations'); track('gate_shown', { gate: 'locations', autonomy: run.autonomy }); return true; }
       const picks: Record<string, string> = {};
       for (const l of analysis.locations) {
         const wide = jobs.find((j) => (j.input as { entity: string; kind: string }).entity === l.name && (j.input as { kind: string }).kind === 'wide' && j.state === 'succeeded');

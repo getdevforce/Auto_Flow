@@ -1,0 +1,17 @@
+{
+  "events": ["app_opened", "generation", "autopilot_started", "autopilot_completed", "gate_shown", "gate_approved", "refine_shown", "refine_accepted", "preset_used", "template_used", "shot_flagged", "first_generation"],
+  "props": {
+    "provider": { "type": "string", "max": 48 },
+    "model": { "type": "string", "max": 96 },
+    "success": { "type": "bool" },
+    "error_code": { "type": "string", "max": 32 },
+    "duration_ms": { "type": "int", "max": 3600000 },
+    "autonomy": { "type": "enum", "values": ["manual", "checkpoints", "full_auto"] },
+    "shots": { "type": "int", "max": 10000 },
+    "flagged": { "type": "int", "max": 10000 },
+    "gate": { "type": "enum", "values": ["characters", "locations", "pilot_scene"] },
+    "item": { "type": "string", "max": 96 },
+    "kind": { "type": "enum", "values": ["image", "video", "upscale", "voice", "text"] },
+    "reason": { "type": "enum", "values": ["policy_rejected", "auth", "quota", "rate_limited", "transient", "invalid_request", "unknown", "upscale_failed", "low_score", "skipped"] }
+  }
+}
