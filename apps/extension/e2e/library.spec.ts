@@ -110,7 +110,7 @@ test('personal prompts can be saved, reused and deleted', async () => {
   await t.getByLabel(/^Prompt \(use/).fill('{character} on the dock');
   await t.getByRole('button', { name: 'Save prompt' }).click();
   await expect(t.getByLabel('Saved prompts').getByText('Dock walk')).toBeVisible();
-  await t.getByRole('button', { name: 'Use' }).click();
+  await t.getByRole('button', { name: 'Use', exact: true }).click();
   await openTab(page, 'Create');
   await expect(page.getByRole('region', { name: 'Create' }).getByLabel(/^Prompts/)).toHaveValue('{character} on the dock');
   await openTab(page, 'Prompts');
