@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type RunRow, type ShotRow } from '../db/db';
 import { regenerateShot, skipShot } from '../autopilot/shots';
+import { sendErrorReport } from '../feedback';
 
 const LABEL: Record<string, string> = {
   planned: 'queued', refined: 'refining', keyframe: 'keyframe', kf_locked: 'keyframe', generating: 'generating', upscaling: 'upscaling',
@@ -66,6 +67,7 @@ function ShotDetail({ run, shot }: { run: RunRow; shot: ShotRow }) {
   const kf = useUrl(shot.kfAssetId);
   const [prompt, setPrompt] = useState(shot.refined ?? '');
   const [model, setModel] = useState(shot.videoModel ?? '');
+  const [reported, setReported] = useState(false);
   useEffect(() => { setPrompt(shot.refined ?? ''); }, [shot.refined, shot.seq]);
   return (
     <div className="grid gap-2 rounded-lg border border-line bg-surface p-3" data-testid="shot-detail">
@@ -75,6 +77,7 @@ function ShotDetail({ run, shot }: { run: RunRow; shot: ShotRow }) {
       <p className="text-muted">Attempts: keyframe {shot.kfAttempt}, video {shot.videoAttempt}{shot.upAttempt ? `, upscale ${shot.upAttempt}` : ''}.
         {shot.kfScores.length > 0 && ` Keyframe scores (heuristic): ${shot.kfScores.map((x) => x.toFixed(2)).join(', ')}.`}</p>
       {shot.flagReason && <p role="status" className="text-danger">{shot.flagReason}</p>}
+      {shot.status === 'flagged' && <button className="w-fit underline" onClick={async () => { const j = await db.jobs.where('runId').equals(run.id).filter((x) => x.seq === shot.seq && !!x.error).last(); try { await sendErrorReport({ error_code: j?.error?.kind ?? 'unknown', provider: j?.provider, model: j?.model, kind: j?.kind }); setReported(true); } catch { setReported(false); } }}>{reported ? 'Report sent' : 'Send an error report (codes only)'}</button>}
       {shot.suggestedRewrite && <p className="text-muted">Suggested rewrite: {shot.suggestedRewrite} <button className="underline" onClick={() => setPrompt(shot.suggestedRewrite!)}>Use it</button></p>}
       <label className="grid gap-1">Prompt<textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
       {shot.rationale && <p className="text-muted">Why: {shot.rationale}</p>}

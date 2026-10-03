@@ -13,7 +13,7 @@ test('signs in against the real backend and loads remote config', async () => {
   const page = await openSidePanel(ctx, id);
   await expect(page.getByTestId('config-status')).toContainText('Config v1 (network)');
   await openTab(page, 'Settings');
-  await page.getByLabel('Email').fill('e2e@example.com');
+  await page.getByLabel('Email', { exact: true }).fill('e2e@example.com');
   await page.getByLabel('Password').fill('wrong-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert')).toContainText('Email or password is wrong');

@@ -9,6 +9,7 @@ import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
 import { dismissAnnouncement, updateRequired, useConfig } from '../../src/config-store';
 import { isTelemetryEnabled, setTelemetryEnabled, track, flushTelemetry } from '../../src/telemetry';
+import { sendFeedback } from '../../src/feedback';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
 const TABS = ['Autopilot', 'Create', 'Bible', 'Library', 'Prompts', 'Cinema', 'Settings'] as const;
@@ -25,6 +26,8 @@ export function App() {
   const { config, announcements, load } = useConfig();
   const [err, setErr] = useState('');
   const [share, setShare] = useState(true);
+  const [fbMsg, setFbMsg] = useState('');
+  const [fbStatus, setFbStatus] = useState('');
 
   useEffect(() => {
     getSession().then(setSession);
@@ -106,6 +109,19 @@ export function App() {
               <input type="checkbox" checked={share} onChange={(e) => { setShare(e.target.checked); void setTelemetryEnabled(e.target.checked); }} />
               <span>Share anonymous usage counts. Event names and totals only: which provider and model, success or failure, run sizes. Never scripts, prompts, filenames, images or keys.</span>
             </label>
+            <h2 className="mt-6 text-[15px] font-semibold">Send feedback</h2>
+            <form className="mt-2 grid gap-2" onSubmit={async (e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              try { await sendFeedback(String(f.get('message')), String(f.get('email') || '') || undefined); setFbStatus('Thanks. We read every message.'); setFbMsg(''); }
+              catch (x) { setFbStatus((x as Error).message); }
+            }}>
+              <label className="grid gap-1">Message<textarea name="message" value={fbMsg} onChange={(e) => setFbMsg(e.target.value)} rows={3} required maxLength={2000} className="rounded-md border border-line bg-surface px-2 py-1" /></label>
+              <label className="grid gap-1">Email, if you want a reply (optional)<input name="email" type="email" className="rounded-md border border-line bg-surface px-2 py-1" /></label>
+              <p className="text-muted">This sends only what you type here. Your scripts, prompts and keys are not attached.</p>
+              <button className="w-fit rounded-md border border-line px-3 py-1">Send feedback</button>
+              {fbStatus && <p role="status" className="text-muted">{fbStatus}</p>}
+            </form>
             <h2 className="mt-6 text-[15px] font-semibold">Provider keys</h2>
             <KeysPanel />
           </>
