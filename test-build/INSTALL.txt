@@ -1,0 +1,10 @@
+Load unpacked in Chrome (116 or newer):
+1. Open chrome://extensions
+2. Turn on Developer mode (top right)
+3. Click "Load unpacked" and select this folder (test-build)
+4. Click the Frameloom icon in the toolbar to open the side panel
+5. Keys tab: set a passphrase, add your provider key (Anthropic, OpenAI-compatible, fal.ai or ElevenLabs)
+
+This is a local test build: no backend is connected, so it uses the bundled free-plan fallback,
+bundled model list and presets. Account, backend templates and announcements stay unavailable.
+Keys stay on this computer.
