@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\TelemetryController;
 use App\Http\Controllers\Api\TemplateController;
+use App\Http\Middleware\EnsureNotSuspended;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -30,7 +31,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     });
 
-    Route::middleware(['auth:sanctum', 'throttle:120,1'])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureNotSuspended::class, 'throttle:120,1'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::post('auth/email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:3,1');
         Route::get('me', [MeController::class, 'show']);

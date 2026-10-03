@@ -54,6 +54,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(Device::class);
     }
 
+    /** @return HasMany<UserNote, $this> */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(UserNote::class)->latest('id');
+    }
+
     public function effectivePlan(): Plan
     {
         return $this->plan ?? Plan::default();
