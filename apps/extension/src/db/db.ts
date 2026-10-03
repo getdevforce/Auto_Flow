@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion } from '@frameloom/shared';
+import type { Autonomy, CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion, Run, ScriptAnalysis } from '@frameloom/shared';
 import type { VaultRecord, VaultStorage } from '../vault/vault';
 
 interface KvRow { key: string; value: unknown }
@@ -15,7 +15,23 @@ export interface RunRow {
   nameTemplate: string;
   createdAt: number;
   pausedReason?: string;
+  // Autopilot only
+  kind?: 'create' | 'autopilot';
+  machine?: Run;
+  stage?: string;
+  autonomy?: Autonomy;
+  script?: string;
+  textProvider?: string;
+  textModel?: string;
+  imageProvider?: string;
+  imageModel?: string;
+  /** Approved asset per entity name, per gate. */
+  approvals?: { characters?: Record<string, string>; locations?: Record<string, string> };
+  /** Shown to the user so full-auto decisions stay reviewable. */
+  decisions?: Array<{ at: number; text: string }>;
 }
+export interface AnalysisRow { runId: string; analysis: ScriptAnalysis }
+export interface LlmCacheRow { hash: string; text: string }
 export interface AssetRow { id: string; jobId: string; mime: string; blob: Blob }
 /** `files` records the requested download paths; the browser may rename them on collision or in automation. */
 export interface JobRow extends Job { downloaded?: boolean; files?: string[] }
@@ -26,6 +42,8 @@ export class AppDb extends Dexie {
   runs!: Table<RunRow, string>;
   jobs!: Table<JobRow, string>;
   assets!: Table<AssetRow, string>;
+  analyses!: Table<AnalysisRow, string>;
+  llmCache!: Table<LlmCacheRow, string>;
   characters!: Table<CharacterDraft, string>;
   characterVersions!: Table<CharacterVersion, string>;
   locations!: Table<LocationDraft, string>;
@@ -33,6 +51,11 @@ export class AppDb extends Dexie {
   constructor(name = 'frameloom') {
     super(name);
     this.version(1).stores({ kv: 'key' });
+    this.version(4).stores({
+      kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
+      characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',
+      analyses: 'runId', llmCache: 'hash',
+    });
     this.version(3).stores({
       kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
       characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',

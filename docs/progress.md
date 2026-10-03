@@ -6,10 +6,11 @@
 - M2 Provider layer: adapter interfaces (text, image, video, upscale, voice), Anthropic adapter (verified against docs), OpenAI-compatible + custom endpoint, ElevenLabs, fal.ai video/upscale (unverified shapes, fixtures hand-written), error taxonomy via shared http helper, admin model registry with publish-to-config, Settings > Keys with Test connection (e2e against a mock server). Local ffmpeg.wasm upscale fallback deferred to M7.
 - M3 Run and queue engine: durable QueueEngine in shared (per-provider pacing that learns from 429, full-jitter backoff, retry-after, budget cap, circuit breaker, restart recovery; 11 tests), Create tab (multi-prompt, .txt/.csv import, naming template, cost estimate, budget cap), Dexie-backed runner in the service worker (Web Lock loop, chrome.alarms safety net, exactly-once auto-download). 4 Playwright e2e: ordered run, 429 retry + policy flag without stalling, budget pause, browser restart mid-run.
 - M4 Story Bible and consistency: schemas, immutable versioned locks with content hash (re-lock unchanged = same version, edit = next), stale-shot detection, deterministic prompt compiler (descriptor ordering, priority-based trimming, ref picking by shot size, ratio/duration clamping; inline snapshot + fast-check property tests), generateWithChecks (retry, best-of, flag), vision scoring prompts for identity and environment. Bible tab for characters with lock e2e. 104 shared tests, 92% coverage.
+- M5 Script analysis and approval gates (S0-S3): .txt/.md/.fountain/.docx import, deterministic scene splitter + chunking, chunked parallel analysis with LLM response cache (crash-resume without re-paying), alias merge/resolve, coverage check with re-request and honest reporting, autonomy levels (manual/checkpoints/full auto) with decision log, character portraits + reference sheets + locks, location plates + locks. 4 e2e: checkpoints gates, full auto, manual, restart resume. 125 shared tests.
 ## In progress
-M5 Script analysis and approval gates
-## Next
 M6 Prompt Director and cinema
+## Next
+M7 Autopilot end-to-end (M6 Director first)
 ## Known issues
 - Sandbox has no real provider keys, no MySQL server, no Chrome Web Store, no live billing.
 - Larastan/phpstan cannot be installed in the sandbox (GitHub zipball downloads blocked by egress policy); CI installs it. Static analysis is therefore unverified locally.
@@ -17,3 +18,4 @@ M6 Prompt Director and cinema
 - Create tab only supports image generation; video comes with M7. Passphrase-mode vaults cannot be unlocked by the service worker yet, so runs pause with a clear message (fix planned in M7: session key handoff).
 - Download filenames are asserted from the paths the extension requests (Playwright renames downloads to GUIDs).
 - Bible UI covers characters only; location editing UI arrives with the environment build in M5 (store functions and schemas exist). Reference-sheet generation is S2 in M5. Consistency scoring is implemented and unit-tested against a fake provider only; real-model quality is unverified.
+- Analysis golden tests use a hand-written fixture script and a fake model; they verify merging, chunking and coverage logic, NOT real-model extraction quality. Reference sheets are prompt-only (the OpenAI-compatible adapter does not pass reference images yet), so identity across views is unverified. Full-auto picks the first candidate (no vision scoring of portraits yet). Pilot-scene gate arrives with M7.

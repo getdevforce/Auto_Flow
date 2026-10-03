@@ -5,8 +5,9 @@ import {
 import { db, type JobRow } from '../db/db';
 import { loadKey } from '../keys';
 import { vault } from '../services';
+import { drive } from '../autopilot/pipeline';
 
-export interface ImageJobInput { providerId: ProviderId; prompt: string; ratio?: string; count: number; label: string }
+export interface ImageJobInput { providerId: ProviderId; prompt: string; ratio?: string; count: number; label?: string; download?: boolean }
 
 /** Jobs of one run presented to the engine as a store. Writes preserve extension-only fields (downloaded). */
 class RunStore implements JobStore {
@@ -58,7 +59,7 @@ export async function downloadFinished(runId: string): Promise<void> {
   const run = await db.runs.get(runId);
   if (!run) return;
   const jobs = await db.jobs.where('runId').equals(runId).toArray();
-  for (const job of jobs.filter((j) => j.state === 'succeeded' && !j.downloaded)) {
+  for (const job of jobs.filter((j) => j.state === 'succeeded' && !j.downloaded && (j.input as ImageJobInput).download !== false)) {
     const ids = ((job.result as { assetIds?: string[] })?.assetIds) ?? [];
     const files: string[] = [];
     for (const [i, id] of ids.entries()) {
@@ -83,14 +84,27 @@ export async function runLoop(): Promise<void> {
     if (!lock) return;
     const engines = new Map<string, QueueEngine>();
     const recovered = new Set<string>();
+    const open = (j: { state: string }) => j.state === 'queued' || j.state === 'running' || j.state === 'polling';
     for (;;) {
-      const runs = (await db.runs.toArray()).filter((r) => r.state === 'generating');
-      if (!runs.length) break;
+      let progressed = false;
+      // Autopilot steps first: they create the jobs the engine then runs.
+      for (const r of (await db.runs.toArray()).filter((x) => x.kind === 'autopilot' && ['analysing', 'building'].includes(x.state))) {
+        try { while (await drive(r.id)) progressed = true; }
+        catch (e) { await db.runs.update(r.id, { state: 'paused', pausedReason: (e as Error).message }); }
+      }
+
       let wake: number | null = null;
-      for (const run of runs) {
+      let openJobs = 0;
+      const active = (await db.runs.toArray()).filter((r) => ['generating', 'building'].includes(r.state));
+      for (const run of active) {
+        const before = await db.jobs.where('runId').equals(run.id).toArray();
+        if (!before.some(open)) {
+          if (run.kind !== 'autopilot' && before.length) await db.runs.update(run.id, { state: 'completed' });
+          continue;
+        }
         let engine = engines.get(run.id);
         if (!engine) {
-          const spent = (await db.jobs.where('runId').equals(run.id).toArray()).reduce((s, j) => s + (j.costUsd ?? 0), 0);
+          const spent = before.reduce((s, j) => s + (j.costUsd ?? 0), 0);
           engine = new QueueEngine({
             store: new RunStore(run.id), executor, breaker: new CircuitBreaker(5), budget: new BudgetGuard(run.budgetUsd, spent),
             concurrency: { openai: 2, custom: 2, anthropic: 2 },
@@ -100,15 +114,15 @@ export async function runLoop(): Promise<void> {
         }
         if (!recovered.has(run.id)) { await engine.recover(); recovered.add(run.id); }
         const r = await engine.tick();
+        // Finished jobs may unlock the next autopilot step, so go around again.
+        if (r.started > 0 || r.polled > 0) progressed = true;
         await downloadFinished(run.id);
-        const jobs = await db.jobs.where('runId').equals(run.id).toArray();
-        if (!r.paused && jobs.every((j) => j.state === 'succeeded' || j.state === 'failed' || j.state === 'skipped')) {
-          await db.runs.update(run.id, { state: 'completed' });
-        }
+        const after = await db.jobs.where('runId').equals(run.id).toArray();
+        if (after.some(open) && !r.paused) openJobs++;
         if (r.nextWakeAt !== null) wake = wake === null ? r.nextWakeAt : Math.min(wake, r.nextWakeAt);
       }
-      if (wake === null) break;
-      await sleep(Math.min(Math.max(wake - Date.now(), 250), 2000));
+      if (!progressed && openJobs === 0) break;
+      await sleep(wake === null ? 250 : Math.min(Math.max(wake - Date.now(), 250), 2000));
     }
   });
   await scheduleSafetyAlarm();
@@ -116,7 +130,7 @@ export async function runLoop(): Promise<void> {
 
 /** Fallback wake-up in case this worker is evicted while work remains. */
 export async function scheduleSafetyAlarm(): Promise<void> {
-  const active = (await db.runs.toArray()).some((r) => r.state === 'generating');
+  const active = (await db.runs.toArray()).some((r) => r.state === 'generating' || r.state === 'analysing' || r.state === 'building');
   if (active) await chrome.alarms.create('frameloom-tick', { delayInMinutes: 0.5, periodInMinutes: 0.5 });
   else await chrome.alarms.clear('frameloom-tick');
 }

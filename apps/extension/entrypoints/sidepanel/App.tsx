@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { brand } from '../../src/brand';
+import { AutopilotPanel } from '../../src/ui/AutopilotPanel';
 import { BiblePanel } from '../../src/ui/BiblePanel';
 import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
@@ -44,6 +45,8 @@ export function App() {
           <button className="rounded-md bg-accent px-3 py-1.5 text-accent-ink">Sign in</button>
         </form>
       )}
+      <h2 className="mt-6 text-[15px] font-semibold">Autopilot</h2>
+      <AutopilotPanel />
       <h2 className="mt-6 text-[15px] font-semibold">Create</h2>
       <CreatePanel />
       <h2 className="mt-6 text-[15px] font-semibold">Bible</h2>

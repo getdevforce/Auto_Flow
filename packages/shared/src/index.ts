@@ -7,3 +7,7 @@ export * from './providers';
 export * from './queue';
 export * from './create';
 export * from './bible';
+export * from './script/scenes';
+export * from './script/docx';
+export * from './analysis';
+export * from './autopilot';

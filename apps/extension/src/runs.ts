@@ -42,6 +42,8 @@ export async function startCreateRun(r: CreateRequest): Promise<string> {
 }
 
 export async function resumeRun(runId: string): Promise<void> {
-  await db.runs.update(runId, { state: 'generating', pausedReason: undefined });
+  const run = await db.runs.get(runId);
+  // Autopilot runs go back to the state recorded by the run state machine, not blindly to generating.
+  await db.runs.update(runId, { state: run?.machine?.state ?? 'generating', pausedReason: undefined });
   await chrome.runtime.sendMessage({ type: 'wake' });
 }
