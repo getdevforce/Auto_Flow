@@ -27,6 +27,7 @@ use Database\Seeders\DefaultLegalPagesSeeder;
 use Database\Seeders\DefaultPlansSeeder;
 use Database\Seeders\DefaultRemoteConfigSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
@@ -41,7 +42,7 @@ function who(string $role): User
 }
 
 it('accepts feedback and codes-only error reports and refuses anything that could carry content', function () {
-    $this->withoutMiddleware(Illuminate\Routing\Middleware\ThrottleRequests::class);
+    $this->withoutMiddleware(ThrottleRequests::class);
     $this->postJson('/api/v1/feedback', ['type' => 'feedback', 'message' => 'The upscale step is slow', 'email' => 'a@example.com'])->assertCreated();
     $this->postJson('/api/v1/feedback', ['type' => 'error_report', 'context' => ['error_code' => 'rate_limited', 'provider' => 'fal', 'model' => 'kling-v2', 'kind' => 'video']])->assertCreated();
     expect(FeedbackReport::count())->toBe(2)->and(FeedbackReport::where('type', 'error_report')->first()->context)->toMatchArray(['error_code' => 'rate_limited']);

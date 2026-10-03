@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Billing\BillingProvider;
+use App\Billing\PaddleProvider;
 use App\Models\Setting;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -15,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(BillingProvider::class, fn () => match (config('billing.provider')) {
+            'paddle' => new PaddleProvider((string) config('billing.paddle.webhook_secret'), (string) config('billing.paddle.api_key'), (string) config('billing.paddle.api_base')),
+            default => throw new \InvalidArgumentException('Unknown billing provider.'),
+        });
     }
 
     /**

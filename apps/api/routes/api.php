@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\FeedbackController;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('config', [ConfigController::class, 'show'])->middleware('throttle:60,1');
+
+    Route::post('billing/webhook', [BillingController::class, 'webhook']);
 
     Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:5,1');
 
@@ -42,6 +45,7 @@ Route::prefix('v1')->group(function () {
         Route::get('me', [MeController::class, 'show']);
         Route::get('entitlements', [MeController::class, 'entitlements']);
         Route::post('templates/{slug}/rate', [TemplateController::class, 'rate']);
+        Route::post('billing/checkout', [BillingController::class, 'checkout'])->middleware('throttle:10,1');
         Route::get('devices', [DeviceController::class, 'index']);
         Route::patch('devices/{device}', [DeviceController::class, 'update']);
         Route::delete('devices/{device}', [DeviceController::class, 'destroy']);
