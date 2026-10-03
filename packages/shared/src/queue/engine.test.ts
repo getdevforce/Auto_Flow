@@ -121,6 +121,14 @@ describe('QueueEngine', () => {
     expect((await state(h.store, 'j1')).state).toBe('succeeded');
   });
 
+  it('counts repeated failures of one shot once, so a single bad shot cannot stall the run', async () => {
+    const h = setup({ exec: { start: async () => { throw new ProviderError('transient', 'x'); } }, breaker: 2, concurrency: 1 });
+    await h.store.put(mkJob('j1', { seq: 7, maxAttempts: 10 }));
+    for (let i = 0; i < 4; i++) { await h.engine.tick(); h.advance(500_000); }
+    expect(h.engine.paused).toBe(false);
+    expect((await state(h.store, 'j1')).attempts).toBe(4);
+  });
+
   it('trips the breaker after N consecutive failures', async () => {
     const h = setup({ exec: { start: async () => { throw new ProviderError('transient', 'x'); } }, breaker: 2, concurrency: 5 });
     for (const id of ['j1', 'j2', 'j3']) await h.store.put(mkJob(id));

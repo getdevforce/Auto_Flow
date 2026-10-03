@@ -31,6 +31,8 @@ export interface TickResult {
 export class QueueEngine {
   private readonly pacers = new Map<string, AdaptivePacer>();
   private pausedReason: 'budget' | 'breaker' | null = null;
+  /** Sequence of the last job that fed the breaker; repeats of the same shot count once. */
+  private lastFailedSeq: number | null = null;
   private readonly now: () => number;
   private readonly rng: () => number;
   private readonly pollMs: number;
@@ -124,6 +126,7 @@ export class QueueEngine {
   private async succeed(job: Job, result: unknown, costUsd: number): Promise<void> {
     this.o.budget.record(costUsd);
     this.o.breaker.recordSuccess();
+    this.lastFailedSeq = null;
     this.pacer(job.provider).onSuccess();
     const done: Job = { ...job, state: 'succeeded', result, costUsd, error: undefined };
     await this.o.store.put(done);
@@ -134,7 +137,10 @@ export class QueueEngine {
     const kind: ErrorKind = e instanceof ProviderError ? e.kind : 'unknown';
     const message = (e as Error).message ?? 'Unknown error';
     const retryAfterMs = e instanceof ProviderError ? e.opts.retryAfterMs : undefined;
-    this.o.breaker.recordFailure(kind);
+    // One stubborn shot failing repeatedly says nothing about provider health, so it feeds the breaker once.
+    // Failures across different shots, and auth/quota errors, still trip it.
+    if (kind === 'auth' || kind === 'quota' || this.lastFailedSeq !== job.seq) this.o.breaker.recordFailure(kind);
+    this.lastFailedSeq = job.seq;
     if (kind === 'rate_limited') this.pacer(job.provider).onRateLimited();
 
     if (this.o.breaker.isOpen) this.pause('breaker', this.o.breaker.reason ?? 'too many failures');

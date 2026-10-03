@@ -13,3 +13,4 @@ export * from './analysis';
 export * from './autopilot';
 export * from './director';
 export * from './cinema';
+export * from './planning';

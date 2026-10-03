@@ -84,8 +84,8 @@ function KeyRow({ id, has, status, onSave, onTest, onRemove }: {
           <button className="rounded-md border border-line px-2 py-1" onClick={onRemove}>Remove</button>
         </div>
       ) : (
-        <form className="mt-2 grid gap-2" onSubmit={(e) => { e.preventDefault(); onSave({ apiKey: key, baseUrl: id === 'custom' ? base : undefined }); setKey(''); }}>
-          {id === 'custom' && <label className="grid gap-1">Base URL<input value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://host/v1" required className="rounded-md border border-line bg-surface px-2 py-1" /></label>}
+        <form className="mt-2 grid gap-2" onSubmit={(e) => { e.preventDefault(); onSave({ apiKey: key, baseUrl: (id === 'custom' || id === 'fal') && base ? base : undefined }); setKey(''); }}>
+          {(id === 'custom' || id === 'fal') && <label className="grid gap-1">Base URL<input value={base} onChange={(e) => setBase(e.target.value)} placeholder={id === 'fal' ? 'Optional, default https://queue.fal.run' : 'https://host/v1'} required={id === 'custom'} className="rounded-md border border-line bg-surface px-2 py-1" /></label>}
           <label className="grid gap-1">API key<input value={key} onChange={(e) => setKey(e.target.value)} type="password" required autoComplete="off" className="rounded-md border border-line bg-surface px-2 py-1" /></label>
           <button className="w-fit rounded-md bg-accent px-3 py-1 text-accent-ink">Save key</button>
         </form>

@@ -7,12 +7,15 @@ import { db, type RunRow } from '../db/db';
 import { loadKey } from '../keys';
 import { vault } from '../services';
 import { CachingTextProvider } from './llm-cache';
+import { defaultSettings, driveProduction } from './shots';
+import type { RunSettings } from '../db/db';
 
 export const CANDIDATES_PER_CHARACTER = 3;
 
 export interface AutopilotStart {
   project: string; script: string; autonomy: RunRow['autonomy'];
   textProvider: ProviderId; textModel: string; imageProvider: ProviderId; imageModel: string; budgetUsd: number;
+  settings?: Partial<RunSettings>;
 }
 
 const evId = (run: RunRow, name: string) => `${run.id}:${name}`;
@@ -36,6 +39,7 @@ export async function startAutopilot(s: AutopilotStart): Promise<string> {
     id, name: s.project, project: s.project, state: 'draft', budgetUsd: s.budgetUsd, nameTemplate: '{project}/{seq}_{scene}_{shot}',
     createdAt: Date.now(), kind: 'autopilot', stage: 'analysis', autonomy: s.autonomy, script: s.script, machine: newRun(),
     textProvider: s.textProvider, textModel: s.textModel, imageProvider: s.imageProvider, imageModel: s.imageModel, approvals: {}, decisions: [],
+    settings: defaultSettings({ directorModel: s.textModel, ...s.settings }),
   });
   await send(id, 'START', 'start');
   await chrome.runtime.sendMessage({ type: 'wake' });
@@ -56,9 +60,9 @@ async function textProviderFor(run: RunRow): Promise<TextProvider> {
 }
 
 /** Pending approvals the UI should show. */
-export function gateFor(run: RunRow): 'characters' | 'locations' | null {
+export function gateFor(run: RunRow): 'characters' | 'locations' | 'pilot_scene' | null {
   if (run.state !== 'awaiting_approval') return null;
-  return run.stage === 'characters' || run.stage === 'locations' ? run.stage : null;
+  return run.stage === 'characters' || run.stage === 'locations' || run.stage === 'pilot_scene' ? run.stage : null;
 }
 
 export async function approve(runId: string, gate: 'characters' | 'locations', picks: Record<string, string>): Promise<void> {
@@ -95,6 +99,7 @@ export async function drive(runId: string): Promise<boolean> {
   let run = (await db.runs.get(runId))!;
   if (run.kind !== 'autopilot' || !run.machine) return false;
   const state = run.machine.state;
+  if (state === 'generating') return driveProduction(runId);
 
   if (state === 'analysing') {
     const provider = await textProviderFor(run);
@@ -157,10 +162,9 @@ export async function drive(runId: string): Promise<boolean> {
     for (const [li, l] of analysis.locations.entries()) await lockAnalysedLocation(run, l, li);
     await log(runId, `Locked ${analysis.locations.length} location(s). Every scene is now bound to an environment lock.`);
     await db.runs.update(runId, { stage: 'shot_planning' });
-    run = await send(runId, 'BUILD_DONE', 'build-done');
     return true;
   }
-  return false;
+  return driveProduction(runId);
 }
 
 async function lockAnalysedCharacter(run: RunRow, c: AnalysedCharacter, ci: number, sheets: Job[]): Promise<void> {

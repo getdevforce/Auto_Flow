@@ -1,13 +1,10 @@
-import {
-  BudgetGuard, CircuitBreaker, ProviderError, QueueEngine, createProvider, renderName,
-  type Executor, type Job, type JobStore, type ProviderId,
-} from '@frameloom/shared';
+import { BudgetGuard, CircuitBreaker, QueueEngine, renderName, type Job, type JobStore } from '@frameloom/shared';
 import { db, type JobRow } from '../db/db';
-import { loadKey } from '../keys';
-import { vault } from '../services';
 import { drive } from '../autopilot/pipeline';
 
-export interface ImageJobInput { providerId: ProviderId; prompt: string; ratio?: string; count: number; label?: string; download?: boolean }
+export type { ImageJobInput } from './executor';
+import type { ImageJobInput } from './executor';
+import { executor } from './executor';
 
 /** Jobs of one run presented to the engine as a store. Writes preserve extension-only fields (downloaded). */
 class RunStore implements JobStore {
@@ -18,33 +15,6 @@ class RunStore implements JobStore {
     await db.jobs.put({ ...job, downloaded: prev?.downloaded, files: prev?.files });
   }
 }
-
-const executor: Executor = {
-  async start(job) {
-    const input = job.input as ImageJobInput;
-    let key;
-    try {
-      if (!vault.isUnlocked) await vault.unlock();
-      key = await loadKey(input.providerId);
-    } catch {
-      throw new ProviderError('auth', 'Your keys are locked or missing. Unlock them in Settings > Keys, then resume the run.');
-    }
-    const provider = createProvider(input.providerId, key, (u, i) => fetch(u, i));
-    if (!('generate' in provider) || job.kind !== 'image') throw new ProviderError('invalid_request', `${input.providerId} cannot generate images.`);
-    const blobs = await (provider as unknown as { generate(r: unknown): Promise<Array<{ bytes: Uint8Array; mime: string }>> })
-      .generate({ model: job.model, prompt: input.prompt, ratio: input.ratio, count: input.count });
-    const ids: string[] = [];
-    await db.transaction('rw', db.assets, async () => {
-      for (const [i, b] of blobs.entries()) {
-        const id = `${job.id}:${i}`;
-        await db.assets.put({ id, jobId: job.id, mime: b.mime, blob: new Blob([b.bytes as BlobPart], { type: b.mime }) });
-        ids.push(id);
-      }
-    });
-    return { done: true, result: { assetIds: ids }, costUsd: (job.estimateUsd ?? 0) };
-  },
-  async poll() { return { state: 'running' }; },
-};
 
 const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const r = new FileReader();
@@ -59,7 +29,7 @@ export async function downloadFinished(runId: string): Promise<void> {
   const run = await db.runs.get(runId);
   if (!run) return;
   const jobs = await db.jobs.where('runId').equals(runId).toArray();
-  for (const job of jobs.filter((j) => j.state === 'succeeded' && !j.downloaded && (j.input as ImageJobInput).download !== false)) {
+  for (const job of jobs.filter((j) => j.kind === 'image' && j.state === 'succeeded' && !j.downloaded && (j.input as ImageJobInput).download !== false)) {
     const ids = ((job.result as { assetIds?: string[] })?.assetIds) ?? [];
     const files: string[] = [];
     for (const [i, id] of ids.entries()) {
@@ -88,7 +58,7 @@ export async function runLoop(): Promise<void> {
     for (;;) {
       let progressed = false;
       // Autopilot steps first: they create the jobs the engine then runs.
-      for (const r of (await db.runs.toArray()).filter((x) => x.kind === 'autopilot' && ['analysing', 'building'].includes(x.state))) {
+      for (const r of (await db.runs.toArray()).filter((x) => x.kind === 'autopilot' && ['analysing', 'building', 'generating'].includes(x.state))) {
         try { while (await drive(r.id)) progressed = true; }
         catch (e) { await db.runs.update(r.id, { state: 'paused', pausedReason: (e as Error).message }); }
       }
@@ -105,7 +75,10 @@ export async function runLoop(): Promise<void> {
         let engine = engines.get(run.id);
         if (!engine) {
           const spent = before.reduce((s, j) => s + (j.costUsd ?? 0), 0);
+          // Advanced setting (kv 'pollMs'); lets tests and fast providers poll more often than the 5s default.
+          const pollMs = Number((await db.kv.get('pollMs'))?.value) || 5000;
           engine = new QueueEngine({
+            pollIntervalMs: pollMs,
             store: new RunStore(run.id), executor, breaker: new CircuitBreaker(5), budget: new BudgetGuard(run.budgetUsd, spent),
             concurrency: { openai: 2, custom: 2, anthropic: 2 },
             onEvent: (e) => { if (e.type === 'paused') void db.runs.update(run.id, { state: 'paused', pausedReason: e.detail }); },

@@ -15,7 +15,7 @@ export function createProvider(id: ProviderId, s: ProviderSettings, fetchFn: Fet
     case 'anthropic': return new AnthropicProvider(s.apiKey, fetchFn);
     case 'openai': return new OpenAICompatibleProvider('openai', s.apiKey, fetchFn, undefined, 'OpenAI');
     case 'custom': return new OpenAICompatibleProvider('custom', s.apiKey, fetchFn, s.baseUrl, 'Custom endpoint');
-    case 'fal': return new FalProvider(s.apiKey, fetchFn);
+    case 'fal': return new FalProvider(s.apiKey, fetchFn, s.baseUrl);
     case 'elevenlabs': return new ElevenLabsProvider(s.apiKey, fetchFn);
   }
 }

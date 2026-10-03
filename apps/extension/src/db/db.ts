@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Autonomy, CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion, Run, ScriptAnalysis } from '@frameloom/shared';
+import type { Shot, Autonomy, CharacterDraft, CharacterVersion, Job, LocationDraft, LocationVersion, Run, ScriptAnalysis } from '@frameloom/shared';
 import type { VaultRecord, VaultStorage } from '../vault/vault';
 
 interface KvRow { key: string; value: unknown }
@@ -15,6 +15,7 @@ export interface RunRow {
   nameTemplate: string;
   createdAt: number;
   pausedReason?: string;
+  report?: unknown;
   // Autopilot only
   kind?: 'create' | 'autopilot';
   machine?: Run;
@@ -26,9 +27,31 @@ export interface RunRow {
   imageProvider?: string;
   imageModel?: string;
   /** Approved asset per entity name, per gate. */
-  approvals?: { characters?: Record<string, string>; locations?: Record<string, string> };
+  settings?: RunSettings;
+  startedAt?: number;
+  approvals?: { characters?: Record<string, string>; locations?: Record<string, string>; pilot?: boolean };
   /** Shown to the user so full-auto decisions stay reviewable. */
   decisions?: Array<{ at: number; text: string }>;
+}
+export interface RunSettings {
+  mode: 'native' | 'draft_upscale';
+  videoProvider: string; videoModel: string; upscaleProvider: string; upscaleModel: string;
+  ratio: string; maxDurationSec: number; allowedDurations?: number[];
+  draftRes: string; targetRes: string; targetWidth: number; targetHeight: number;
+  strictOrder: boolean; refineStrength: 'off' | 'light' | 'standard' | 'full';
+  fallbackEnabled: boolean; fallbackModels: string[];
+  keyframeThreshold: number; keyframeAttempts: number; score: boolean;
+  priceKeyframe: number; priceVideoPerSec: number; priceUpscale: number;
+  /** Director model for refinement; scoring uses the cheap model. */
+  directorModel: string; checkModel: string;
+}
+export interface ShotRow {
+  id: string; runId: string; seq: number; status: string; plan: Shot;
+  original?: string; refined?: string; negative?: string; rationale?: string;
+  kfAttempt: number; kfScores: number[]; kfAssets?: string[]; kfAssetId?: string; suggestedRewrite?: string; kfBestScore?: number; kfFlagged?: boolean;
+  videoAttempt: number; upAttempt: number; variantTried: boolean; fallbacksTried: string[]; videoModel?: string;
+  draftAssetId?: string; finalAssetId?: string; flagReason?: string; downloaded?: boolean; downloadedAt?: number; file?: string;
+  costUsd: number; width?: number; height?: number; durationSec?: number; retries: number;
 }
 export interface AnalysisRow { runId: string; analysis: ScriptAnalysis }
 export interface LlmCacheRow { hash: string; text: string }
@@ -42,6 +65,7 @@ export class AppDb extends Dexie {
   runs!: Table<RunRow, string>;
   jobs!: Table<JobRow, string>;
   assets!: Table<AssetRow, string>;
+  shots!: Table<ShotRow, string>;
   analyses!: Table<AnalysisRow, string>;
   llmCache!: Table<LlmCacheRow, string>;
   characters!: Table<CharacterDraft, string>;
@@ -51,6 +75,11 @@ export class AppDb extends Dexie {
   constructor(name = 'frameloom') {
     super(name);
     this.version(1).stores({ kv: 'key' });
+    this.version(5).stores({
+      kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
+      characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',
+      analyses: 'runId', llmCache: 'hash', shots: 'id, runId, seq, status',
+    });
     this.version(4).stores({
       kv: 'key', runs: 'id, state, createdAt', jobs: 'id, runId, state, seq', assets: 'id, jobId',
       characters: 'id, name', characterVersions: 'versionId, id', locations: 'id, name', locationVersions: 'versionId, id',
