@@ -46,10 +46,16 @@ export function startMockProvider(port = 9101): Promise<MockProvider> {
         const body = JSON.parse(raw);
         const prompt: string = body.messages.at(-1).content[0].text;
         counts.set('chat', (counts.get('chat') ?? 0) + 1);
-        const content = prompt.includes('same person or place')
+        const content = prompt.includes('Raw shot description')
+          ? { refined: 'Ada walks across the dock at dusk, 35mm lens, slow tracking shot, tense mood.', negative: 'blur', rationale: 'Filled in lens, camera and mood.' }
+          : prompt.includes('same person or place')
           ? { merges: [{ keep: 'Ben Okoro', absorb: ['Ben'], kind: 'character' }] }
           : analysisFor(prompt);
         return json(200, { choices: [{ message: { content: JSON.stringify(content) }, finish_reason: 'stop' }] });
+      }
+      if (req.url === '/v1/images/edits') {
+        counts.set('edits', (counts.get('edits') ?? 0) + 1);
+        return json(200, { data: [{ b64_json: PNG }] });
       }
       if (req.url === '/v1/images/generations') {
         if (req.headers.authorization !== 'Bearer good-key') return json(401, { error: { message: 'bad key' } });

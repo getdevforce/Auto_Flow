@@ -7,10 +7,11 @@
 - M3 Run and queue engine: durable QueueEngine in shared (per-provider pacing that learns from 429, full-jitter backoff, retry-after, budget cap, circuit breaker, restart recovery; 11 tests), Create tab (multi-prompt, .txt/.csv import, naming template, cost estimate, budget cap), Dexie-backed runner in the service worker (Web Lock loop, chrome.alarms safety net, exactly-once auto-download). 4 Playwright e2e: ordered run, 429 retry + policy flag without stalling, budget pause, browser restart mid-run.
 - M4 Story Bible and consistency: schemas, immutable versioned locks with content hash (re-lock unchanged = same version, edit = next), stale-shot detection, deterministic prompt compiler (descriptor ordering, priority-based trimming, ref picking by shot size, ratio/duration clamping; inline snapshot + fast-check property tests), generateWithChecks (retry, best-of, flag), vision scoring prompts for identity and environment. Bible tab for characters with lock e2e. 104 shared tests, 92% coverage.
 - M5 Script analysis and approval gates (S0-S3): .txt/.md/.fountain/.docx import, deterministic scene splitter + chunking, chunked parallel analysis with LLM response cache (crash-resume without re-paying), alias merge/resolve, coverage check with re-request and honest reporting, autonomy levels (manual/checkpoints/full auto) with decision log, character portraits + reference sheets + locks, location plates + locks. 4 e2e: checkpoints gates, full auto, manual, restart resume. 125 shared tests.
+- M6 Prompt Director and cinema: Director (strength levels, dialect data, pinned phrases, deterministic checks for constraint loss/contradictions/length, cheaper self-critique pass, revert-to-user-wording, hash cache), word diff UI with accept/keep mine/edit, eval harness in CI against recorded outputs (live mode opt-in), 12 camera presets + styles + effects with capability gating, Angles and Stylize tools via reference-image edits. 2 e2e. 144 shared tests, 14 e2e total.
 ## In progress
-M6 Prompt Director and cinema
+M7 Autopilot end-to-end (S4-S11)
 ## Next
-M7 Autopilot end-to-end (M6 Director first)
+M8 Library and templates
 ## Known issues
 - Sandbox has no real provider keys, no MySQL server, no Chrome Web Store, no live billing.
 - Larastan/phpstan cannot be installed in the sandbox (GitHub zipball downloads blocked by egress policy); CI installs it. Static analysis is therefore unverified locally.
@@ -19,3 +20,4 @@ M7 Autopilot end-to-end (M6 Director first)
 - Download filenames are asserted from the paths the extension requests (Playwright renames downloads to GUIDs).
 - Bible UI covers characters only; location editing UI arrives with the environment build in M5 (store functions and schemas exist). Reference-sheet generation is S2 in M5. Consistency scoring is implemented and unit-tested against a fake provider only; real-model quality is unverified.
 - Analysis golden tests use a hand-written fixture script and a fake model; they verify merging, chunking and coverage logic, NOT real-model extraction quality. Reference sheets are prompt-only (the OpenAI-compatible adapter does not pass reference images yet), so identity across views is unverified. Full-auto picks the first candidate (no vision scoring of portraits yet). Pilot-scene gate arrives with M7.
+- Director eval fixtures are hand-recorded, not real model output. The /images/edits multipart call used by Angles/Stylize is unverified against current OpenAI docs. Presets and dialects are bundled; the CMS for editing them is part of M9. The Cinema panel previews the Director but is not yet wired into per-shot refinement (M7).

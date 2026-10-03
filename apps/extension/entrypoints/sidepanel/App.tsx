@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { brand } from '../../src/brand';
 import { AutopilotPanel } from '../../src/ui/AutopilotPanel';
 import { BiblePanel } from '../../src/ui/BiblePanel';
+import { CinemaPanel } from '../../src/ui/CinemaPanel';
 import { CreatePanel } from '../../src/ui/CreatePanel';
 import { KeysPanel } from '../../src/ui/KeysPanel';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
@@ -49,6 +50,8 @@ export function App() {
       <AutopilotPanel />
       <h2 className="mt-6 text-[15px] font-semibold">Create</h2>
       <CreatePanel />
+      <h2 className="mt-6 text-[15px] font-semibold">Cinema</h2>
+      <CinemaPanel />
       <h2 className="mt-6 text-[15px] font-semibold">Bible</h2>
       <BiblePanel />
       <h2 className="mt-6 text-[15px] font-semibold">Settings: keys</h2>

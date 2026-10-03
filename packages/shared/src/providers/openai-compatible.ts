@@ -13,6 +13,8 @@ import { dataUri, fromBase64 } from './bytes';
 import { request, type Fetcher } from './http';
 import { NO_CAPS, type Capabilities, type ImageProvider, type ImageRequest, type MediaBlob, type TextProvider, type TextRequest } from './types';
 
+type ImagesResponse = { data?: Array<{ b64_json?: string; url?: string }> };
+
 const policy = (status: number, body: string) =>
   status === 400 && /moderation|content[_ ]policy|safety system|policy_violation/i.test(body) ? ('policy_rejected' as const) : undefined;
 
@@ -73,13 +75,23 @@ export class OpenAICompatibleProvider implements TextProvider, ImageProvider {
     throw new ProviderError('invalid_request', `${this.label} returned JSON that did not match the expected shape: ${issue}`, { provider: this.id });
   }
 
-  async generate(req: ImageRequest): Promise<MediaBlob[]> {
-    const size = req.ratio === '2:3' ? '1024x1536' : req.ratio === '3:2' ? '1536x1024' : '1024x1024';
-    const res = await this.call('/images/generations', {
-      method: 'POST',
-      body: JSON.stringify({ model: req.model, prompt: req.negativePrompt ? `${req.prompt}\nAvoid: ${req.negativePrompt}` : req.prompt, n: req.count ?? 1, size }),
-    });
-    const data = (await res.json()) as { data?: Array<{ b64_json?: string; url?: string }> };
+  /**
+   * With reference images this uses the multipart edits endpoint (image[] + prompt). UNVERIFIED against current docs;
+   * kept behind capability gating in the UI so a provider that rejects it only affects the Angles/Stylize tools.
+   */
+  private async edit(req: ImageRequest): Promise<MediaBlob[]> {
+    const G = globalThis as unknown as { FormData: new () => { append(k: string, v: unknown, name?: string): void }; Blob: new (parts: unknown[], o: { type: string }) => unknown };
+    const form = new G.FormData();
+    form.append('model', req.model);
+    form.append('prompt', req.prompt);
+    form.append('n', String(req.count ?? 1));
+    (req.references ?? []).forEach((r, i) => form.append('image[]', new G.Blob([r.bytes], { type: r.mime }), `ref${i}.${r.mime.split('/')[1] ?? 'png'}`));
+    const headers = { Authorization: `Bearer ${this.apiKey}` }; // content-type is set by fetch for multipart
+    const res = await request({ provider: this.label, fetch: this.fetchFn }, `${this.baseUrl}/images/edits`, { method: 'POST', headers, body: form as never }, policy);
+    return this.readImages((await res.json()) as ImagesResponse);
+  }
+
+  private async readImages(data: ImagesResponse): Promise<MediaBlob[]> {
     const out: MediaBlob[] = [];
     for (const item of data.data ?? []) {
       if (item.b64_json) out.push({ bytes: fromBase64(item.b64_json), mime: 'image/png' });
@@ -90,5 +102,15 @@ export class OpenAICompatibleProvider implements TextProvider, ImageProvider {
     }
     if (!out.length) throw new ProviderError('transient', `${this.label} returned no image. Retrying.`, { provider: this.id });
     return out;
+  }
+
+  async generate(req: ImageRequest): Promise<MediaBlob[]> {
+    if (req.references?.length) return this.edit(req);
+    const size = req.ratio === '2:3' ? '1024x1536' : req.ratio === '3:2' ? '1536x1024' : '1024x1024';
+    const res = await this.call('/images/generations', {
+      method: 'POST',
+      body: JSON.stringify({ model: req.model, prompt: req.negativePrompt ? `${req.prompt}\nAvoid: ${req.negativePrompt}` : req.prompt, n: req.count ?? 1, size }),
+    });
+    return this.readImages((await res.json()) as ImagesResponse);
   }
 }

@@ -46,6 +46,17 @@ describe('OpenAICompatibleProvider', () => {
     expect((await new OpenAICompatibleProvider('o', 'k', u.fetch).generate({ model: 'i', prompt: 'p' }))[0]!.mime).toBe('image/webp');
     await expect(new OpenAICompatibleProvider('o', 'k', scripted(json({ data: [] })).fetch).generate({ model: 'i', prompt: 'p' })).rejects.toMatchObject({ kind: 'transient' });
   });
+  it('uses the multipart edits endpoint when reference images are given', async () => {
+    const png = Buffer.from([1, 2]).toString('base64');
+    const s = scripted(json({ data: [{ b64_json: png }] }));
+    const out = await new OpenAICompatibleProvider('o', 'k', s.fetch).generate({ model: 'i', prompt: 'new angle', references: [{ bytes: new Uint8Array([9]), mime: 'image/png' }] });
+    expect(out).toHaveLength(1);
+    expect(s.calls[0]!.url).toBe('https://api.openai.com/v1/images/edits');
+    const form = s.calls[0]!.init!.body as FormData;
+    expect(form.get('prompt')).toBe('new angle');
+    expect(form.getAll('image[]')).toHaveLength(1);
+    expect((s.calls[0]!.init!.headers as Record<string, string>)['content-type']).toBeUndefined();
+  });
   it('tests keys against /models', async () => {
     const s = scripted(json({ data: [] }));
     await new OpenAICompatibleProvider('o', 'k', s.fetch).testKey();
