@@ -7,8 +7,13 @@ export default defineConfig({
   hooks: {
     // The ffmpeg core must ship inside the extension: MV3 forbids loading code from a remote host.
     'build:publicAssets': (_wxt, files) => {
-      const dir = new URL('./node_modules/@ffmpeg/core/dist/umd/', import.meta.url).pathname;
-      files.push({ absoluteSrc: `${dir}ffmpeg-core.js`, relativeDest: 'ffmpeg/ffmpeg-core.js' }, { absoluteSrc: `${dir}ffmpeg-core.wasm`, relativeDest: 'ffmpeg/ffmpeg-core.wasm' });
+      const dir = new URL('./node_modules/@ffmpeg/core/dist/esm/', import.meta.url).pathname;
+      const lib = new URL('./node_modules/@ffmpeg/ffmpeg/dist/esm/', import.meta.url).pathname;
+      files.push(
+        { absoluteSrc: `${dir}ffmpeg-core.js`, relativeDest: 'ffmpeg/ffmpeg-core.js' }, { absoluteSrc: `${dir}ffmpeg-core.wasm`, relativeDest: 'ffmpeg/ffmpeg-core.wasm' },
+        // The wrapper's worker and its two imports, shipped as-is so no bundler rewrites the worker URL.
+        ...['worker.js', 'const.js', 'errors.js'].map((f) => ({ absoluteSrc: `${lib}${f}`, relativeDest: `ffmpeg/${f}` })),
+      );
     },
   },
   modules: ['@wxt-dev/module-react'],

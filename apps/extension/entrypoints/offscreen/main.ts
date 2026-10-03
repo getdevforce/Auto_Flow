@@ -3,7 +3,7 @@ import { db } from '../../src/db/db';
 // Long-running and Blob-heavy work lives here because the service worker can be evicted and cannot create object URLs.
 
 type FFmpegLike = {
-  load(o: { coreURL: string; wasmURL: string }): Promise<void>;
+  load(o: { coreURL: string; wasmURL: string; classWorkerURL: string }): Promise<void>;
   writeFile(n: string, d: Uint8Array): Promise<void>;
   readFile(n: string): Promise<Uint8Array | string>;
   exec(a: string[]): Promise<number>;
@@ -15,7 +15,7 @@ function loadFfmpeg(): Promise<FFmpegLike> {
   ffmpeg ??= (async () => {
     const { FFmpeg } = await import('@ffmpeg/ffmpeg');
     const ff = new FFmpeg() as unknown as FFmpegLike;
-    await ff.load({ coreURL: chrome.runtime.getURL('ffmpeg/ffmpeg-core.js'), wasmURL: chrome.runtime.getURL('ffmpeg/ffmpeg-core.wasm') });
+    await ff.load({ coreURL: chrome.runtime.getURL('ffmpeg/ffmpeg-core.js'), wasmURL: chrome.runtime.getURL('ffmpeg/ffmpeg-core.wasm'), classWorkerURL: chrome.runtime.getURL('ffmpeg/worker.js') });
     return ff;
   })();
   return ffmpeg;
@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
     return true;
   }
   if (msg.type === 'local-resize') {
-    localResize(msg.assetId, msg.width, msg.height, msg.outId).then((id) => respond({ ok: true, assetId: id })).catch((e: Error) => respond({ ok: false, error: e.message }));
+    localResize(msg.assetId, msg.width, msg.height, msg.outId).then((id) => respond({ ok: true, assetId: id })).catch((e: unknown) => respond({ ok: false, error: String((e as Error)?.message ?? e) }));
     return true;
   }
   if (msg.type === 'revoke') { URL.revokeObjectURL(msg.url); respond(true); }
