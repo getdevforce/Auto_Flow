@@ -132,7 +132,7 @@ describe('FalProvider', () => {
 describe('createProvider', () => {
   it('builds each adapter from an id', () => {
     const f = scripted(json({})).fetch;
-    for (const id of ['anthropic', 'openai', 'custom', 'fal', 'elevenlabs'] as const) {
+    for (const id of ['anthropic', 'openai', 'deepseek', 'custom', 'fal', 'elevenlabs'] as const) {
       expect(createProvider(id, { apiKey: 'k', baseUrl: 'https://x/v1' }, f)).toBeTruthy();
     }
   });

@@ -94,6 +94,7 @@ export function startMockProvider(port = 9101, opts: { realMp4?: Buffer } = {}):
       requests.push({ url: req.url ?? '', auth: req.headers.authorization, body: raw });
       const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
         res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(JSON.stringify(body));
+      if (req.url?.startsWith('/flow-mock')) return void res.writeHead(200, { 'content-type': 'text/html' }).end(FLOW_PAGE);
       if (req.url?.startsWith('/fal/')) return fal(opts.realMp4, req, res, raw, counts, json);
       if (req.url === '/v1/models') {
         return req.headers.authorization === 'Bearer good-key' ? json(200, { data: [] }) : json(401, { error: { message: 'bad key' } });
@@ -101,7 +102,8 @@ export function startMockProvider(port = 9101, opts: { realMp4?: Buffer } = {}):
       if (req.url === '/v1/chat/completions') {
         if (req.headers.authorization !== 'Bearer good-key') return json(401, { error: { message: 'bad key' } });
         const body = JSON.parse(raw);
-        const prompt: string = body.messages.at(-1).content[0].text;
+        const last = body.messages.at(-1).content;
+        const prompt: string = typeof last === 'string' ? last : last[0].text;
         counts.set('chat', (counts.get('chat') ?? 0) + 1);
         const rawShot = /Raw shot description:\n([\s\S]*?)(\n\n|$)/.exec(prompt)?.[1];
         const sceneNo = /^Scene (\d+)/m.exec(prompt)?.[1];
@@ -134,3 +136,31 @@ export function startMockProvider(port = 9101, opts: { realMp4?: Buffer } = {}):
   });
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve({ requests, counts, close: () => new Promise((r) => { server.closeAllConnections?.(); server.close(() => r()); }) })));
 }
+
+/**
+ * Stand-in for the Flow web app, for the e2e test only. It mimics what the driver relies on (a prompt box, a Create
+ * button, a Videos/Images switch, results that appear after a delay, an alert on refusal), not Flow's real markup.
+ */
+const FLOW_PAGE = `<!doctype html><meta charset="utf-8"><title>Flow stand-in</title>
+<style>body{font:14px system-ui;margin:20px}#grid{display:flex;flex-wrap:wrap;gap:8px}#bar{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#eee;display:flex;gap:8px}textarea{flex:1;height:60px}</style>
+<div role="tablist"><button role="tab" id="mv">Videos</button><button role="tab" id="mi">Images</button></div>
+<div id="grid"></div>
+<div id="bar"><textarea placeholder="What do you want to create?"></textarea><button aria-label="Create"><span>arrow_forward</span> Create</button></div>
+<script>
+let mode='video';const grid=document.getElementById('grid');const ta=document.querySelector('textarea');
+mv.onclick=()=>mode='video';mi.onclick=()=>mode='image';
+window.__prompts=[];
+document.querySelector('[aria-label=Create]').onclick=()=>{
+  const text=ta.value;window.__prompts.push({mode,text});ta.value='';
+  if(text.includes('[BLOCK]')){const a=document.createElement('div');a.setAttribute('role','alert');a.textContent='Something went wrong: this prompt violates the usage policy.';document.body.append(a);return;}
+  const c=document.createElement('canvas');c.width=320;c.height=180;const g=c.getContext('2d');
+  const paint=(n)=>{g.fillStyle='hsl('+(n*40)%360+',60%,50%)';g.fillRect(0,0,320,180);g.fillStyle='#fff';g.fillText(text.slice(0,40),10,90);};
+  if(mode==='image'){setTimeout(()=>{paint(window.__prompts.length);const i=new Image();i.width=320;i.height=180;i.src=c.toDataURL('image/png');grid.append(i);},800);return;}
+  setTimeout(()=>{
+    const stream=c.captureStream(10);const rec=new MediaRecorder(stream,{mimeType:'video/webm'});const parts=[];
+    rec.ondataavailable=(e)=>parts.push(e.data);
+    rec.onstop=()=>{const v=document.createElement('video');v.width=320;v.height=180;v.muted=true;v.src=URL.createObjectURL(new Blob(parts,{type:'video/webm'}));grid.append(v);};
+    rec.start();let n=0;const t=setInterval(()=>{paint(n++);if(n>8){clearInterval(t);rec.stop();}},100);
+  },600);
+};
+</script>`;

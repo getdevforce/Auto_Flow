@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { brand } from '../../src/brand';
+import { FlowPanel } from '../../src/ui/FlowPanel';
 import { AutopilotPanel } from '../../src/ui/AutopilotPanel';
 import { BiblePanel } from '../../src/ui/BiblePanel';
 import { LibraryPanel } from '../../src/ui/LibraryPanel';
@@ -15,11 +16,11 @@ import { applyStoredPrefs } from '../../src/prefs';
 import { sendFeedback } from '../../src/feedback';
 import { fetchConfig, getSession, login, logout, type Session } from '../../src/services';
 
-const TABS = ['Autopilot', 'Create', 'Bible', 'Library', 'Prompts', 'Cinema', 'Settings'] as const;
+const TABS = ['Flow', 'Autopilot', 'Create', 'Bible', 'Library', 'Prompts', 'Cinema', 'Settings'] as const;
 type Tab = (typeof TABS)[number];
 
 const remembered = (): Tab => {
-  try { const t = localStorage.getItem('tab') as Tab; return TABS.includes(t) ? t : 'Autopilot'; } catch { return 'Autopilot'; }
+  try { const t = localStorage.getItem('tab') as Tab; return TABS.includes(t) ? t : 'Flow'; } catch { return 'Flow'; }
 };
 
 export function App() {
@@ -48,7 +49,7 @@ export function App() {
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && e.key !== 'Escape' && !e.altKey) return;
-      if (e.altKey && /^[1-7]$/.test(e.key)) { setTab(TABS[Number(e.key) - 1] as Tab); e.preventDefault(); }
+      if (e.altKey && /^[1-8]$/.test(e.key)) { setTab(TABS[Number(e.key) - 1] as Tab); e.preventDefault(); }
       else if (e.altKey && e.key === ',') setTab('Settings');
       else if (e.key === '?' && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) setSheet((v) => !v);
     };
@@ -108,6 +109,7 @@ export function App() {
 
       {sheet && <ShortcutSheet onClose={() => setSheet(false)} />}
       <div role="tabpanel" aria-label={tab}>
+        {tab === 'Flow' && <FlowPanel />}
         {tab === 'Autopilot' && <AutopilotPanel />}
         {tab === 'Create' && <CreatePanel />}
         {tab === 'Bible' && <BiblePanel />}

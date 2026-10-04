@@ -4,6 +4,7 @@ import { vault } from './services';
 export const PROVIDER_LABELS: Record<ProviderId, string> = {
   anthropic: 'Anthropic (script analysis, director, checks)',
   openai: 'OpenAI (text and images)',
+  deepseek: 'DeepSeek (script analysis and shot planning)',
   custom: 'Custom OpenAI-compatible endpoint',
   fal: 'fal.ai (video and upscale)',
   elevenlabs: 'ElevenLabs (voice)',

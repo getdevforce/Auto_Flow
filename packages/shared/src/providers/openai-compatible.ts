@@ -39,8 +39,12 @@ export class OpenAICompatibleProvider implements TextProvider, ImageProvider {
   async complete(req: TextRequest): Promise<string> { return this.chat(req, false); }
 
   private async chat(req: TextRequest, json: boolean): Promise<string> {
-    const userContent: unknown[] = [{ type: 'text', text: req.cacheablePrefix ? `${req.cacheablePrefix}\n\n${req.prompt}` : req.prompt }];
-    for (const img of req.images ?? []) userContent.push({ type: 'image_url', image_url: { url: dataUri(img) } });
+    const prompt = req.cacheablePrefix ? `${req.cacheablePrefix}\n\n${req.prompt}` : req.prompt;
+    // Text-only requests use a plain string: some compatible servers (DeepSeek) reject content-part arrays.
+    let userContent: unknown = prompt;
+    if (req.images?.length) {
+      userContent = [{ type: 'text', text: prompt }, ...req.images.map((img) => ({ type: 'image_url', image_url: { url: dataUri(img) } }))];
+    }
     const messages = [...(req.system ? [{ role: 'system', content: req.system }] : []), { role: 'user', content: userContent }];
     const res = await this.call('/chat/completions', {
       method: 'POST',

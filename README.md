@@ -8,6 +8,14 @@ Your keys, scripts, prompts and generated media never go to the backend. Keys ar
 
 The extension only works while Chrome is open. If the computer sleeps or the browser restarts, a run picks up where it stopped and does not pay twice for finished work.
 
+## Quick start: script to Flow (no backend needed)
+1. Load `test-build/` as an unpacked extension (chrome://extensions, Developer mode, Load unpacked).
+2. Open the side panel, tab **Flow**. Open "Keys", create the vault, save your DeepSeek key.
+3. Paste the script, type the model name, press **Read script and prepare prompts**. Check or edit the prompts.
+4. Sign in to Flow (labs.google/fx/tools/flow) and open a project, then press **Open Flow and start**.
+5. Results are saved to `Downloads/Frameloom/<project>/` as `001_scene01_shot01.mp4` and so on; character pictures go in `characters/`.
+Turn off "Ask where to save each file" in Chrome's download settings, or every save will wait for you. If it cannot find Flow's buttons, use "If it cannot find Flow's buttons" in the panel to point at them once.
+
 ## What is in the repo
 
 | Path | What |

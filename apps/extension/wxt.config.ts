@@ -33,7 +33,9 @@ export default defineConfig({
     optional_permissions: ['power'],
     // Fixed provider API hosts only; custom endpoints use the optional permission prompt.
     host_permissions: [
-      'https://api.anthropic.com/*', 'https://api.openai.com/*', 'https://queue.fal.run/*', 'https://api.elevenlabs.io/*',
+      'https://api.anthropic.com/*', 'https://api.openai.com/*', 'https://queue.fal.run/*', 'https://api.elevenlabs.io/*', 'https://api.deepseek.com/*',
+      // Flow page (content script) and the hosts its results are served from.
+      'https://labs.google/*', 'https://storage.googleapis.com/*', 'https://*.googleusercontent.com/*',
       ...(process.env.WXT_E2E ? ['http://127.0.0.1/*'] : []),
     ],
     optional_host_permissions: ['https://*/*'],

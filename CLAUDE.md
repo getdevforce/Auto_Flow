@@ -26,7 +26,7 @@ remote config, templates, billing and analytics.
 - Update `docs/progress.md` after every milestone.
 
 ## Do not
-- Do not automate third-party web UIs (no DOM scraping/clicking). Official APIs only.
+- Do not automate third-party web UIs (no DOM scraping/clicking). Official APIs only. One exception, decided by the owner (D17): the Flow tab driver in `entrypoints/flow.content.ts` and `src/flow/`. Nothing else may touch another site's DOM.
 - Do not send provider keys, prompts, scripts or media to the backend, or log them. Telemetry is counts and metadata only.
 - Do not hardcode model names, prices or limits outside the registry fallback.
 - Do not commit secrets; `.env.example` only.
