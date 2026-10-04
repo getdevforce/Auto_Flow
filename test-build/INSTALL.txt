@@ -1,10 +1,7 @@
 Load unpacked in Chrome (116 or newer):
-1. Open chrome://extensions
-2. Turn on Developer mode (top right)
-3. Click "Load unpacked" and select this folder (test-build)
-4. Click the Frameloom icon in the toolbar to open the side panel
-5. Keys tab: set a passphrase, add your provider key (Anthropic, OpenAI-compatible, fal.ai or ElevenLabs)
-
-This is a local test build: no backend is connected, so it uses the bundled free-plan fallback,
-bundled model list and presets. Account, backend templates and announcements stay unavailable.
-Keys stay on this computer.
+1. Open chrome://extensions and turn on Developer mode
+2. Load unpacked -> select this folder
+3. Click the Frameloom icon, open the Flow tab
+4. Keys: create the vault, save your DeepSeek key
+5. Paste script, type the model name, "Read script and prepare prompts", then sign in to Flow and "Open Flow and start"
+Files are saved to Downloads/Frameloom/<project>/ (turn off "Ask where to save each file" in Chrome).

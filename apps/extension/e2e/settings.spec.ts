@@ -58,7 +58,7 @@ test('theme and density apply and persist; the shortcut sheet opens with ? and t
   await expect(page.getByTestId('shortcut-sheet')).toContainText('Alt + 1 to 7');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('shortcut-sheet')).toHaveCount(0);
-  await page.keyboard.press('Alt+3');
+  await page.keyboard.press('Alt+4');
   await expect(page.getByRole('tab', { name: 'Bible' })).toHaveAttribute('aria-selected', 'true');
   await ctx.close();
 });

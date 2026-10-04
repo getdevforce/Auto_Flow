@@ -4,7 +4,7 @@ import { db } from '../db/db';
 import { deleteAllLocalData, exportProject, importProject, listProjects } from '../projects';
 
 export const SHORTCUTS: Array<[string, string]> = [
-  ['Alt + 1 to 7', 'Switch tab (Autopilot, Create, Bible, Library, Prompts, Cinema, Settings)'],
+  ['Alt + 1 to 8', 'Switch tab (Flow, Autopilot, Create, Bible, Library, Prompts, Cinema, Settings)'],
   ['Alt + , (comma)', 'Open Settings'],
   ['?', 'Show or hide this list'],
   ['Left / Right arrow on a tab', 'Move between tabs'],
